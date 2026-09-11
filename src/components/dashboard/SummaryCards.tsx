@@ -9,7 +9,11 @@ interface SummaryCardsProps {
   loading?: boolean
 }
 
-export function SummaryCards({ totalIncome, totalExpense, loading }: SummaryCardsProps) {
+export function SummaryCards({
+  totalIncome,
+  totalExpense,
+  loading,
+}: SummaryCardsProps) {
   const balance = totalIncome - totalExpense
 
   if (loading) {

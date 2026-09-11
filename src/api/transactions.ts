@@ -1,21 +1,41 @@
-import { get, post, put, del } from '@/lib/api'
-import type { Transaction, TransactionListResult, BulkDeleteResult } from '@/types/transaction'
+import { get, post, patch, del, query } from '@/lib/api'
+import type {
+  Transaction,
+  TransactionListResult,
+  TransactionType,
+} from '@/types/transaction'
 
-export async function fetchTransactions(
-  cursor?: string,
-): Promise<TransactionListResult> {
-  const params = new URLSearchParams({ limit: '20' })
-  if (cursor) params.set('cursor', cursor)
-  return get<TransactionListResult>(`/transactions?${params}`)
+export interface ListTransactionsParams {
+  from: string
+  to: string
+  type?: TransactionType
+  tagId?: string
+  paymentMethodId?: string
+  limit?: number
+  offset?: number
 }
 
-interface CreateTransactionData {
-  amount: number
-  type: 'income' | 'expense'
-  date: string
+export function listTransactions(
+  params: ListTransactionsParams,
+): Promise<TransactionListResult> {
+  return get<TransactionListResult>(`/transactions?${query({ ...params })}`)
+}
+
+export function getTransaction(id: string): Promise<Transaction> {
+  return get<Transaction>(`/transactions/${id}`)
+}
+
+export interface CreateTransactionData {
   description: string
-  splits: { amount: number; number: number; paymentMethodId: string }[]
-  tagIds?: string[]
+  amount: number
+  type: TransactionType
+  /** Nome da forma de pagamento: o backend resolve por texto, não por id. */
+  paymentMethod: string
+  date?: string
+  /** Nomes das tags, não ids — o backend cria a que não existir. */
+  tags?: string[]
+  installments?: number
+  notes?: string
 }
 
 export function createTransaction(
@@ -24,26 +44,27 @@ export function createTransaction(
   return post<Transaction>('/transactions', data)
 }
 
-interface UpdateTransactionData {
-  amount?: number
-  type?: 'income' | 'expense'
+export interface UpdateTransactionData {
   description?: string
+  amount?: number
   date?: string
+  paymentMethodId?: string
+  tagIds?: string[]
+  notes?: string
 }
 
 export function updateTransaction(
   id: string,
   data: UpdateTransactionData,
 ): Promise<Transaction> {
-  return put<Transaction>(`/transactions/${id}`, data)
+  return patch<Transaction>(`/transactions/${id}`, data)
 }
 
-export async function deleteTransaction(id: string): Promise<void> {
+export function deleteTransaction(id: string): Promise<void> {
   return del(`/transactions/${id}`)
 }
 
-export async function bulkDeleteTransactions(
-  ids: string[],
-): Promise<BulkDeleteResult> {
-  return post<BulkDeleteResult>('/transactions/bulk-delete', { ids })
+/** Não existe bulk no backend: N deletes em paralelo. */
+export async function deleteTransactions(ids: string[]): Promise<void> {
+  await Promise.all(ids.map(deleteTransaction))
 }

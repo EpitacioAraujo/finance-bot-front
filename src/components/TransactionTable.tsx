@@ -10,6 +10,7 @@ import {
 import { Button } from './ui/button'
 import { Checkbox } from './ui/checkbox'
 import { Trash2, Pencil } from 'lucide-react'
+import { formatDate } from '../lib/format'
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -20,6 +21,7 @@ interface TransactionTableProps {
   onToggleSelectAll: () => void
   onDelete: (id: string) => void
   onEdit?: (id: string) => void
+  onOpen?: (id: string) => void
 }
 
 export function TransactionTable({
@@ -29,6 +31,7 @@ export function TransactionTable({
   onToggleSelectAll,
   onDelete,
   onEdit,
+  onOpen,
 }: TransactionTableProps) {
   const allSelected = transactions.length > 0 && transactions.every((t) => selectedIds.has(t.id))
   const someSelected = transactions.some((t) => selectedIds.has(t.id))
@@ -48,15 +51,22 @@ export function TransactionTable({
           <TableHead>Data</TableHead>
           <TableHead>Descrição</TableHead>
           <TableHead className="text-right">Valor</TableHead>
-          <TableHead className="text-right sr-only">Ações</TableHead>
+          <TableHead className="text-right">
+            <span className="sr-only">Ações</span>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {transactions.map((t) => {
           const isIncome = t.type === 'income'
           return (
-            <TableRow key={t.id}>
-              <TableCell>
+            <TableRow
+              key={t.id}
+              className={onOpen ? 'cursor-pointer' : undefined}
+              onClick={onOpen ? () => onOpen(t.id) : undefined}
+            >
+              {/* Seleção e ações não abrem o detalhe. */}
+              <TableCell onClick={(e) => e.stopPropagation()}>
                 <Checkbox
                   checked={selectedIds.has(t.id)}
                   onCheckedChange={() => onToggleSelect(t.id)}
@@ -64,25 +74,28 @@ export function TransactionTable({
                 />
               </TableCell>
               <TableCell className="text-muted-foreground">
-                {new Date(t.date).toLocaleDateString('pt-BR')}
+                {formatDate(t.date)}
               </TableCell>
               <TableCell>
                 <div className="flex flex-col">
                   <span>{t.description}</span>
-                  {t.splits && t.splits.length > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      {t.splits.filter((s) => s.paidAt !== null).length}/{t.splits.length} paga{t.splits.length > 1 ? 's' : ''}
-                      {t.splits.length === 1 && (
-                        <> &middot; {t.splits[0].paymentMethod.description}</>
-                      )}
-                    </span>
-                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {t.paymentMethod?.description}
+                    {t.splits && t.splits.length > 0 && (
+                      <>
+                        {' '}&middot;{' '}
+                        {t.splits.filter((s) => s.paidAt !== null).length}/
+                        {t.splits.length} parcela{t.splits.length > 1 ? 's' : ''} paga
+                        {t.splits.length > 1 ? 's' : ''}
+                      </>
+                    )}
+                  </span>
                 </div>
               </TableCell>
               <TableCell className={`text-right font-medium ${isIncome ? 'text-emerald-600' : 'text-red-600'}`}>
                 {isIncome ? '' : '- '}{currency.format(Math.abs(t.amount))}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                 {onEdit && (
                   <Button
                     variant="ghost"

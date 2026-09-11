@@ -6,6 +6,7 @@ import { ThemeProvider } from './hooks/use-theme'
 import DashboardPage from './components/dashboard/DashboardPage'
 import { TransactionListPage } from './components/transactions/TransactionListPage'
 import { TransactionForm } from './components/transactions/TransactionForm'
+import { TransactionDetails } from './components/transactions/TransactionDetails'
 import { PaymentMethodListPage } from './components/payment-methods/PaymentMethodListPage'
 import { PaymentMethodForm } from './components/payment-methods/PaymentMethodForm'
 import { TagListPage } from './components/tags/TagListPage'
@@ -21,9 +22,11 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
-            <Route path="transactions" element={<TransactionListPage />} />
-            <Route path="transactions/new" element={<TransactionForm />} />
-            <Route path="transactions/:id/edit" element={<TransactionForm />} />
+            <Route path="transactions" element={<TransactionListPage />}>
+              <Route path="new" element={<TransactionForm />} />
+              <Route path=":id" element={<TransactionForm />} />
+              <Route path=":id/details" element={<TransactionDetails />} />
+            </Route>
             <Route path="payment-methods" element={<PaymentMethodListPage />} />
             <Route path="payment-methods/new" element={<PaymentMethodForm />} />
             <Route path="payment-methods/:id/edit" element={<PaymentMethodForm />} />

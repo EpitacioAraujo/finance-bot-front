@@ -1,5 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchTransactions, deleteTransaction, bulkDeleteTransactions } from '@/api/transactions'
+import { listTransactions, deleteTransaction, deleteTransactions } from '@/api/transactions'
+import { listPaymentMethods } from '@/api/payment-methods'
+import { listTags } from '@/api/tags'
+import type { PaymentMethod } from '@/types/payment-method'
+import type { Tag } from '@/types/tag'
+import { formatDate } from '@/lib/format'
+import { FilterSheet } from '@/components/FilterSheet'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import type { Transaction } from '@/types/transaction'
 import { TransactionTable } from '@/components/TransactionTable'
 import { LoadingState } from '@/components/LoadingState'
@@ -8,15 +23,26 @@ import { ErrorState } from '@/components/ErrorState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Plus, Trash2 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import {
+  Outlet,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 
 type PageState =
   | { status: 'loading' }
   | { status: 'error'; message?: string }
   | { status: 'empty' }
-  | { status: 'loaded'; data: Transaction[]; cursor?: string }
-  | { status: 'loading-more'; data: Transaction[]; cursor?: string }
+  | { status: 'loaded'; data: Transaction[]; total: number }
+  | { status: 'loading-more'; data: Transaction[]; total: number }
+
+const PAGE_SIZE = 20
+
+// ponytail: a tela não tem filtro de período e o backend exige janela; quando
+// entrar um seletor de mês aqui, trocar por monthRange().
+const FULL_RANGE = { from: '1900-01-01', to: '2999-12-31' }
 
 export function TransactionListPage() {
   const navigate = useNavigate()
@@ -29,64 +55,97 @@ export function TransactionListPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null)
   const loaderRef = useRef<HTMLDivElement>(null)
+  const location = useLocation()
+  // A lista fica montada atrás do modal do formulário, então salvar não a
+  // remonta mais: o form avisa por state e isto recarrega.
+  const savedAt = (location.state as { saved?: number } | null)?.saved
+
+  // O filtro mora na URL — é o que faz o link vindo de Contas a Pagar chegar
+  // aqui já filtrado, e o que sobrevive a abrir e fechar os modais.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const paymentMethodId = searchParams.get('paymentMethodId') ?? ''
+  const tagId = searchParams.get('tagId') ?? ''
+  const type = searchParams.get('type') ?? ''
+  const from = searchParams.get('from') ?? ''
+  const to = searchParams.get('to') ?? ''
+  const activeFilters = [paymentMethodId, tagId, type, from, to].filter(Boolean).length
+
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
+  const [tags, setTags] = useState<Tag[]>([])
 
   useEffect(() => {
-    fetchTransactions()
+    Promise.all([listPaymentMethods(), listTags()])
+      .then(([pms, tgs]) => {
+        setPaymentMethods(pms)
+        setTags(tgs)
+      })
+      .catch(() => undefined)
+  }, [])
+
+  // Cada controle escreve direto na URL: sem estado paralelo, sem botão de
+  // aplicar, e o link que vem de Contas a Pagar já cai filtrado.
+  const setFilter = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams)
+    if (value) next.set(key, value)
+    else next.delete(key)
+    setSearchParams(next)
+  }
+
+  const query = {
+    from: from || FULL_RANGE.from,
+    to: to || FULL_RANGE.to,
+    paymentMethodId: paymentMethodId || undefined,
+    tagId: tagId || undefined,
+    type: (type || undefined) as 'income' | 'expense' | undefined,
+  }
+
+  useEffect(() => {
+    listTransactions({ ...query, limit: PAGE_SIZE, offset: 0 })
       .then((result) => {
-        if (result.data.length === 0) {
+        if (result.items.length === 0) {
           setState({ status: 'empty' })
         } else {
           setState({
             status: 'loaded',
-            data: result.data,
-            cursor: result.nextCursor,
+            data: result.items,
+            total: result.total,
           })
         }
       })
       .catch((err: Error) => {
         setState({ status: 'error', message: err.message })
       })
-  }, [])
+  }, [savedAt, from, to, paymentMethodId, tagId, type])
 
   const loadMore = useCallback(() => {
-    if (state.status !== 'loaded' && state.status !== 'loading-more') return
-    const cursor =
-      state.status === 'loaded' ? state.cursor : state.cursor
-    if (!cursor) return
+    if (state.status !== 'loaded') return
+    if (state.data.length >= state.total) return
 
-    setState((prev) => {
-      if (prev.status === 'loaded') {
-        return { status: 'loading-more', data: prev.data, cursor: prev.cursor }
-      }
-      if (prev.status === 'loading-more') return prev
-      return prev
-    })
+    const offset = state.data.length
+    setState({ status: 'loading-more', data: state.data, total: state.total })
 
-    fetchTransactions(cursor)
+    listTransactions({ ...query, limit: PAGE_SIZE, offset })
       .then((result) => {
         setState((prev) => {
           const currentData =
             prev.status === 'loaded' || prev.status === 'loading-more'
               ? prev.data
               : []
-          const merged = [...currentData, ...result.data]
           return {
             status: 'loaded',
-            data: merged,
-            cursor: result.nextCursor,
+            data: [...currentData, ...result.items],
+            total: result.total,
           }
         })
       })
       .catch(() => {
         setState((prev) => {
-          const currentData =
-            prev.status === 'loaded' || prev.status === 'loading-more'
-              ? prev.data
-              : []
-          return { status: 'loaded', data: currentData, cursor: undefined }
+          if (prev.status !== 'loading-more') return prev
+          // Sem mais páginas: `total` vira o que já está em tela e o observer para.
+          return { status: 'loaded', data: prev.data, total: prev.data.length }
         })
       })
-  }, [state])
+  }, [state, from, to, paymentMethodId, tagId, type])
 
   const handleDelete = useCallback((id: string) => {
     setDeleteError(null)
@@ -95,9 +154,19 @@ export function TransactionListPage() {
 
   const handleEdit = useCallback(
     (id: string) => {
-      navigate(`/transactions/${id}/edit`)
+      navigate({ pathname: `/transactions/${id}`, search: location.search })
     },
-    [navigate],
+    [navigate, location.search],
+  )
+
+  const handleOpen = useCallback(
+    (id: string) => {
+      navigate({
+        pathname: `/transactions/${id}/details`,
+        search: location.search,
+      })
+    },
+    [navigate, location.search],
   )
 
   const handleConfirmDelete = useCallback(async () => {
@@ -113,7 +182,7 @@ export function TransactionListPage() {
         const filtered = prev.data.filter((t) => t.id !== confirmDeleteId)
         return filtered.length === 0
           ? { status: 'empty' }
-          : { ...prev, data: filtered }
+          : { ...prev, data: filtered, total: prev.total - 1 }
       })
       setConfirmDeleteId(null)
     } catch (err) {
@@ -128,7 +197,7 @@ export function TransactionListPage() {
           const filtered = prev.data.filter((t) => t.id !== confirmDeleteId)
           return filtered.length === 0
             ? { status: 'empty' }
-            : { ...prev, data: filtered }
+            : { ...prev, data: filtered, total: prev.total - 1 }
         })
         setConfirmDeleteId(null)
       } else {
@@ -178,7 +247,7 @@ export function TransactionListPage() {
 
     const ids = Array.from(selectedIds)
     try {
-      await bulkDeleteTransactions(ids)
+      await deleteTransactions(ids)
       setSelectedIds(new Set())
       setBulkDeleteOpen(false)
       setState((prev) => {
@@ -188,7 +257,7 @@ export function TransactionListPage() {
         const filtered = prev.data.filter((t) => !idSet.has(t.id))
         return filtered.length === 0
           ? { status: 'empty' }
-          : { ...prev, data: filtered }
+          : { ...prev, data: filtered, total: prev.total - ids.length }
       })
     } catch (err) {
       setBulkDeleteError(
@@ -233,16 +302,156 @@ export function TransactionListPage() {
             Gerencie suas receitas e despesas
           </p>
         </div>
-        <Button onClick={() => navigate('/transactions/new')}>
-          <Plus className="size-4" />
-          Nova Transação
-        </Button>
+        <div className="flex items-center gap-2">
+          <FilterSheet
+            active={activeFilters}
+            onClear={() => setSearchParams({})}
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-type">Tipo</Label>
+              <Select
+                items={{ '': 'Todos', expense: 'Despesas', income: 'Receitas' }}
+                value={type}
+                onValueChange={(v) => setFilter('type', v ?? '')}
+              >
+                <SelectTrigger id="f-type">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="expense">Despesas</SelectItem>
+                  <SelectItem value="income">Receitas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-pm">Forma de pagamento</Label>
+              <Select
+                items={[
+                  { value: '', label: 'Todas' },
+                  ...paymentMethods.map((pm) => ({
+                    value: pm.id,
+                    label: pm.description,
+                  })),
+                ]}
+                value={paymentMethodId}
+                onValueChange={(v) => setFilter('paymentMethodId', v ?? '')}
+              >
+                <SelectTrigger id="f-pm">
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas</SelectItem>
+                  {paymentMethods.map((pm) => (
+                    <SelectItem key={pm.id} value={pm.id}>
+                      {pm.description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-tag">Tag</Label>
+              <Select
+                items={[
+                  { value: '', label: 'Todas' },
+                  ...tags.map((tag) => ({
+                    value: tag.id,
+                    label: tag.description,
+                  })),
+                ]}
+                value={tagId}
+                onValueChange={(v) => setFilter('tagId', v ?? '')}
+              >
+                <SelectTrigger id="f-tag">
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas</SelectItem>
+                  {tags.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id}>
+                      {tag.description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label htmlFor="f-from">De</Label>
+                <Input
+                  id="f-from"
+                  type="date"
+                  value={from}
+                  onChange={(e) => setFilter('from', e.target.value)}
+                />
+              </div>
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Label htmlFor="f-to">Até</Label>
+                <Input
+                  id="f-to"
+                  type="date"
+                  value={to}
+                  onChange={(e) => setFilter('to', e.target.value)}
+                />
+              </div>
+            </div>
+          </FilterSheet>
+
+          <Button
+            onClick={() =>
+              navigate({ pathname: '/transactions/new', search: location.search })
+            }
+          >
+            <Plus className="size-4" />
+            Nova Transação
+          </Button>
+        </div>
       </div>
+
+      {activeFilters > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">Filtrado por</span>
+          {[
+            paymentMethods.find((pm) => pm.id === paymentMethodId)?.description,
+            tags.find((tag) => tag.id === tagId)?.description,
+            type ? (type === 'income' ? 'Receitas' : 'Despesas') : undefined,
+            from || to
+              ? `${from ? formatDate(from) : '…'} – ${to ? formatDate(to) : '…'}`
+              : undefined,
+          ]
+            .filter(Boolean)
+            .map((label) => (
+              <span key={label} className="font-medium">
+                {label}
+              </span>
+            ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="ml-auto"
+            onClick={() => setSearchParams({})}
+          >
+            Limpar filtro
+          </Button>
+        </div>
+      )}
 
       <div className="bg-card rounded-lg border border-border">
         {state.status === 'loading' && <LoadingState />}
         {state.status === 'error' && <ErrorState message={state.message} />}
-        {state.status === 'empty' && <EmptyState />}
+        {state.status === 'empty' && (
+          <EmptyState
+            message={
+              activeFilters > 0
+                ? 'Nenhuma transação com os filtros atuais.'
+                : undefined
+            }
+          />
+        )}
         {(state.status === 'loaded' || state.status === 'loading-more') && (
           <>
             {selectedIds.size > 0 && (
@@ -278,8 +487,9 @@ export function TransactionListPage() {
               onToggleSelectAll={handleToggleSelectAll}
               onDelete={handleDelete}
               onEdit={handleEdit}
+              onOpen={handleOpen}
             />
-            {state.cursor && (
+            {state.data.length < state.total && (
               <div ref={loaderRef} className="py-6">
                 {state.status === 'loading-more' && (
                   <div className="flex justify-center">
@@ -313,6 +523,9 @@ export function TransactionListPage() {
         onConfirm={handleConfirmBulkDelete}
         onCancel={handleCancelBulkDelete}
       />
+
+      {/* O formulário é rota filha: abre como modal por cima desta lista. */}
+      <Outlet />
     </div>
   )
 }

@@ -13,14 +13,11 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { LoadingState } from '@/components/LoadingState'
 import { EmptyState } from '@/components/EmptyState'
 import { listPaymentMethods, deletePaymentMethod } from '@/api/payment-methods'
-import type { PaymentMethod } from '@/types/payment-method'
+import {
+  PAYMENT_METHOD_KIND_LABELS,
+  type PaymentMethod,
+} from '@/types/payment-method'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
-
-const frequencyLabel: Record<string, string> = {
-  daily: 'Diario',
-  weekly: 'Semanal',
-  monthly: 'Mensal',
-}
 
 export function PaymentMethodListPage() {
   const navigate = useNavigate()
@@ -70,17 +67,21 @@ export function PaymentMethodListPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Descricao</TableHead>
-                <TableHead>Frequencia</TableHead>
-                <TableHead>Dia Fechamento</TableHead>
-                <TableHead className="w-[80px] sr-only">Acoes</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Fechamento</TableHead>
+                <TableHead>Vencimento</TableHead>
+                <TableHead className="w-[80px]">
+                  <span className="sr-only">Ações</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((pm) => (
                 <TableRow key={pm.id}>
                   <TableCell>{pm.description}</TableCell>
-                  <TableCell>{frequencyLabel[pm.cycleFrequency] ?? pm.cycleFrequency}</TableCell>
-                  <TableCell>{pm.cycleCloseDay ?? '—'}</TableCell>
+                  <TableCell>{PAYMENT_METHOD_KIND_LABELS[pm.kind] ?? pm.kind}</TableCell>
+                  <TableCell>{pm.closingDay ?? '—'}</TableCell>
+                  <TableCell>{pm.dueDay ?? '—'}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon-xs" onClick={() => navigate(`/payment-methods/${pm.id}/edit`)}>

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { getDashboardSummary } from '@/api/dashboard'
+import { getDashboard } from '@/api/reports'
 import { MonthSelector } from './MonthSelector'
 import { SummaryCards } from './SummaryCards'
 import { IncomeExpenseChart } from './IncomeExpenseChart'
+import { ExpenseBreakdown } from './ExpenseBreakdown'
 import { ErrorState } from '@/components/ErrorState'
-import type { DashboardSummary } from '@/types/dashboard'
+import type { DashboardSummary } from '@/types/report'
+import { monthRange } from '@/lib/format'
 
 export default function DashboardPage() {
   const currentMonth = new Date().toISOString().slice(0, 7)
@@ -16,7 +18,7 @@ export default function DashboardPage() {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    getDashboardSummary(month)
+    getDashboard(monthRange(month))
       .then(setSummary)
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false))
@@ -42,6 +44,12 @@ export default function DashboardPage() {
       <SummaryCards
         totalIncome={summary?.totalIncome ?? 0}
         totalExpense={summary?.totalExpense ?? 0}
+        loading={loading}
+      />
+
+      <ExpenseBreakdown
+        byPaymentMethod={summary?.byPaymentMethod ?? []}
+        pendingBills={summary?.pendingBills ?? []}
         loading={loading}
       />
 

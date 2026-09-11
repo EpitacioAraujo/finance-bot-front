@@ -1,5 +1,11 @@
 const BASE_URL = '/api'
 
+/**
+ * PROVISÓRIO, espelha o guard do backend: não existe autenticação, o usuário é
+ * fixo e vem do build. Trocar quando entrar login de verdade.
+ */
+const USER_ID = import.meta.env.VITE_USER_ID as string
+
 async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -7,6 +13,7 @@ async function apiFetch<T>(
   const url = `${BASE_URL}${endpoint}`
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string> | undefined),
+    'x-user-id': USER_ID,
   }
 
   if (options.body && typeof options.body === 'string') {
@@ -39,20 +46,29 @@ export async function get<T>(endpoint: string): Promise<T> {
   return apiFetch<T>(endpoint)
 }
 
-export async function post<T>(endpoint: string, body: unknown): Promise<T> {
+export async function post<T>(endpoint: string, body?: unknown): Promise<T> {
   return apiFetch<T>(endpoint, {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify(body ?? {}),
   })
 }
 
-export async function put<T>(endpoint: string, body: unknown): Promise<T> {
+export async function patch<T>(endpoint: string, body: unknown): Promise<T> {
   return apiFetch<T>(endpoint, {
-    method: 'PUT',
+    method: 'PATCH',
     body: JSON.stringify(body),
   })
 }
 
 export async function del(endpoint: string): Promise<void> {
   return apiFetch<void>(endpoint, { method: 'DELETE' })
+}
+
+/** Monta a query ignorando o que estiver indefinido. */
+export function query(params: Record<string, string | number | undefined>): string {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') search.set(key, String(value))
+  }
+  return search.toString()
 }

@@ -13,11 +13,16 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ArrowLeft, Loader2 } from 'lucide-react'
-import { createBill, updateBill, fetchBills } from '@/api/bills'
+import { createBill, getBill, updateBill, type CreateBillData } from '@/api/bills'
 import { listPaymentMethods } from '@/api/payment-methods'
 import { listTags } from '@/api/tags'
 import type { PaymentMethod } from '@/types/payment-method'
 import type { Tag } from '@/types/tag'
+import {
+  BILL_FREQUENCIES,
+  BILL_FREQUENCY_LABELS,
+  type BillFrequency,
+} from '@/types/bill'
 import { toast } from 'sonner'
 
 export function BillForm() {
@@ -27,7 +32,7 @@ export function BillForm() {
 
   const [description, setDescription] = useState('')
   const [predictedAmount, setPredictedAmount] = useState('')
-  const [frequency, setFrequency] = useState<string>('monthly')
+  const [frequency, setFrequency] = useState<BillFrequency>('monthly')
   const [dueDate, setDueDate] = useState('')
   const [dueDay, setDueDay] = useState('')
   const [paymentMethodId, setPaymentMethodId] = useState('')
@@ -49,21 +54,19 @@ export function BillForm() {
 
   useEffect(() => {
     if (!id) return
-    fetchBills(new Date().toISOString().slice(0, 7))
-      .then((result) => {
-        const found = result.bills.find((b) => b.id === id)
-        if (found) {
-          setDescription(found.description)
-          setPredictedAmount(String(found.predictedAmount))
-          setFrequency(found.frequency)
-          if (found.dueDate) setDueDate(found.dueDate)
-          if (found.dueDay) setDueDay(String(found.dueDay))
-          setPaymentMethodId(found.paymentMethod.id)
-          if (found.tag) setTagId(found.tag.id)
-          if (found.notes) setNotes(found.notes)
-          setActive(found.active)
-        }
+    getBill(id)
+      .then((bill) => {
+        setDescription(bill.description)
+        setPredictedAmount(String(bill.predictedAmount))
+        setFrequency(bill.frequency)
+        if (bill.dueDate) setDueDate(bill.dueDate)
+        if (bill.dueDay) setDueDay(String(bill.dueDay))
+        setPaymentMethodId(bill.paymentMethodId)
+        if (bill.tagId) setTagId(bill.tagId)
+        if (bill.notes) setNotes(bill.notes)
+        setActive(bill.active)
       })
+      .catch(() => toast.error('Erro ao carregar conta'))
       .finally(() => setLoading(false))
   }, [id])
 
@@ -71,7 +74,8 @@ export function BillForm() {
     e.preventDefault()
     setSaving(true)
 
-    const data: any = {
+    // `none` vence numa data; o resto vence num dia do mês.
+    const data: CreateBillData = {
       description,
       predictedAmount: Number(predictedAmount),
       frequency,
@@ -79,12 +83,9 @@ export function BillForm() {
       tagId: tagId || undefined,
       notes: notes || undefined,
       active,
-    }
-
-    if (frequency === 'none') {
-      data.dueDate = dueDate
-    } else {
-      data.dueDay = Number(dueDay)
+      ...(frequency === 'none'
+        ? { dueDate }
+        : { dueDay: Number(dueDay) }),
     }
 
     try {
@@ -152,17 +153,21 @@ export function BillForm() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="freq">Frequencia</Label>
-              <Select items={{ none: 'Avulsa (data unica)', daily: 'Diaria', weekly: 'Semanal', monthly: 'Mensal', yearly: 'Anual' }} value={frequency} onValueChange={(v) => v && setFrequency(v)}>
+              <Label htmlFor="freq">Frequência</Label>
+              <Select
+                items={BILL_FREQUENCY_LABELS}
+                value={frequency}
+                onValueChange={(v) => v && setFrequency(v as BillFrequency)}
+              >
                 <SelectTrigger id="freq">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Avulsa (data unica)</SelectItem>
-                  <SelectItem value="daily">Diaria</SelectItem>
-                  <SelectItem value="weekly">Semanal</SelectItem>
-                  <SelectItem value="monthly">Mensal</SelectItem>
-                  <SelectItem value="yearly">Anual</SelectItem>
+                  {BILL_FREQUENCIES.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {BILL_FREQUENCY_LABELS[item]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -175,7 +180,7 @@ export function BillForm() {
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  required={frequency === 'none'}
+                  required
                 />
               </div>
             ) : (
@@ -188,7 +193,7 @@ export function BillForm() {
                   max={31}
                   value={dueDay}
                   onChange={(e) => setDueDay(e.target.value)}
-                  required={frequency !== 'none'}
+                  required
                 />
               </div>
             )}
@@ -208,18 +213,28 @@ export function BillForm() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="tag">Categoria (opcional)</Label>
-              <Select items={[{ value: '', label: 'Nenhuma' }, ...tags.map((t) => ({ value: t.id, label: t.description }))]} value={tagId} onValueChange={(v) => v !== null && setTagId(v)}>
-                <SelectTrigger id="tag">
-                  <SelectValue placeholder="Nenhuma" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
-                  {tags.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.description}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Tags (opcional)</Label>
+              {/* A conta guarda uma tag só: clicar em outra troca, clicar na
+                  marcada limpa. */}
+              <div className="flex flex-wrap gap-1">
+                {tags.map((tag) => {
+                  const selected = tagId === tag.id
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => setTagId(selected ? '' : tag.id)}
+                      className={`rounded-full px-3 py-1 text-xs border transition-colors ${
+                        selected
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background border-border hover:bg-muted'
+                      }`}
+                    >
+                      {tag.description}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
