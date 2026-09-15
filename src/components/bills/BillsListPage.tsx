@@ -22,7 +22,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { LoadingState } from '@/components/LoadingState'
 import { EmptyState } from '@/components/EmptyState'
 import { listPayables, deleteBill, payBill, payConsolidated } from '@/api/bills'
-import type { BillSummary, BillView, ConsolidatedView } from '@/types/bill'
+import type { BillSummary, PayableItem } from '@/types/bill'
 import { formatCurrency, formatDate, monthRange } from '@/lib/format'
 import { Plus, Pencil, Trash2, Check } from 'lucide-react'
 import { FilterSheet } from '@/components/FilterSheet'
@@ -35,20 +35,6 @@ function competenciaAtual(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
-
-type MergedRow =
-  | { kind: 'bill'; data: BillView }
-  | { kind: 'consolidated'; data: ConsolidatedView }
-
-type PayTarget =
-  | { kind: 'bill'; id: string; predicted: number }
-  | {
-      kind: 'consolidated'
-      cycleId: string
-      description: string
-      total: number
-      itemCount: number
-    }
 
 const EMPTY_SUMMARY: BillSummary = {
   totalPredicted: 0,
@@ -80,12 +66,11 @@ export function BillsListPage() {
     1,
   ).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
   const [loading, setLoading] = useState(true)
-  const [bills, setBills] = useState<BillView[]>([])
-  const [consolidated, setConsolidated] = useState<ConsolidatedView[]>([])
+  const [items, setItems] = useState<PayableItem[]>([])
   const [summary, setSummary] = useState<BillSummary>(EMPTY_SUMMARY)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const [payTarget, setPayTarget] = useState<PayTarget | null>(null)
-  const [openCycle, setOpenCycle] = useState<ConsolidatedView | null>(null)
+  const [payTarget, setPayTarget] = useState<PayableItem | null>(null)
+  const [openCycle, setOpenCycle] = useState<PayableItem | null>(null)
   const [payAmount, setPayAmount] = useState('')
   const [payDate, setPayDate] = useState(todayISO())
   const [paying, setPaying] = useState(false)
@@ -97,8 +82,7 @@ export function BillsListPage() {
       status: statusFilter === 'all' ? undefined : (statusFilter as 'paid' | 'pending'),
     })
       .then((payables) => {
-        setBills(payables.bills)
-        setConsolidated(payables.cycles)
+        setItems(payables.items)
         setSummary(payables.summary)
       })
       .catch(() => toast.error('Erro ao carregar contas'))
@@ -107,17 +91,12 @@ export function BillsListPage() {
 
   useEffect(load, [load])
 
-  const merged: MergedRow[] = [
-    ...bills.map((b) => ({ kind: 'bill' as const, data: b })),
-    ...consolidated.map((c) => ({ kind: 'consolidated' as const, data: c })),
-  ]
-
   const handleConfirmDelete = async () => {
     if (!deleteId) return
     try {
       await deleteBill(deleteId)
-      setBills((prev) => prev.filter((b) => b.id !== deleteId))
       toast.success('Conta removida')
+      load()
     } catch {
       toast.error('Erro ao remover')
     } finally {
@@ -125,24 +104,10 @@ export function BillsListPage() {
     }
   }
 
-  const openPayModal = (row: MergedRow) => {
-    if (row.kind === 'bill') {
-      setPayAmount(String(row.data.predictedAmount))
-      setPayTarget({
-        kind: 'bill',
-        id: row.data.id,
-        predicted: row.data.predictedAmount,
-      })
-    } else {
-      setPayTarget({
-        kind: 'consolidated',
-        cycleId: row.data.cycleId,
-        description: row.data.paymentMethod.description,
-        total: row.data.total,
-        itemCount: row.data.itemCount,
-      })
-    }
+  const openPayModal = (item: PayableItem) => {
+    setPayAmount(String(item.amount))
     setPayDate(todayISO())
+    setPayTarget(item)
   }
 
   const handleConfirmPay = async () => {
@@ -157,7 +122,7 @@ export function BillsListPage() {
         toast.success('Conta paga')
       } else {
         // Fechar a fatura é só o ciclo; valor e data saem das transações dele.
-        await payConsolidated(payTarget.cycleId)
+        await payConsolidated(payTarget.id)
         toast.success('Fatura paga')
       }
       setPayTarget(null)
@@ -242,7 +207,7 @@ export function BillsListPage() {
       <div className="bg-card rounded-lg border border-border">
         {loading ? (
           <LoadingState />
-        ) : merged.length === 0 ? (
+        ) : items.length === 0 ? (
           <EmptyState message="Nenhuma conta a pagar nesta competência." />
         ) : (
           <Table>
@@ -259,102 +224,65 @@ export function BillsListPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {merged.map((row) => {
-                if (row.kind === 'bill') {
-                  const bill = row.data
-                  return (
-                    // A recorrência é expandida na leitura: o mesmo id se repete
-                    // por ocorrência, então a data entra na chave.
-                    <TableRow key={`${bill.id}-${bill.occurrenceDate}`}>
-                      <TableCell className="font-medium whitespace-normal">{bill.description}</TableCell>
-                      <TableCell>{formatDate(bill.occurrenceDate)}</TableCell>
-                      <TableCell>
-                        {formatCurrency(bill.paidAmount ?? bill.predictedAmount)}
-                      </TableCell>
-                      <TableCell>{bill.paymentMethod.description}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                            bill.paid
-                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                          }`}
+              {items.map((item) => (
+                <TableRow
+                  key={item.key}
+                  className={item.kind === 'cycle' ? 'cursor-pointer' : undefined}
+                  onClick={item.kind === 'cycle' ? () => setOpenCycle(item) : undefined}
+                >
+                  <TableCell className="font-medium whitespace-normal">
+                    {item.description}
+                    {item.itemCount !== null && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {item.itemCount} lançamento{item.itemCount > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>{formatDate(item.dueDate)}</TableCell>
+                  <TableCell>{formatCurrency(item.amount)}</TableCell>
+                  <TableCell>{item.paymentMethod.description}</TableCell>
+                  <TableCell>
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        item.status === 'paid'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                      }`}
+                    >
+                      {item.status === 'paid' ? 'Pago' : 'Pendente'}
+                    </span>
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-1">
+                      {item.status === 'pending' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openPayModal(item)}
                         >
-                          {bill.paid ? 'Pago' : 'Pendente'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {!bill.paid && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openPayModal(row)}
-                            >
-                              <Check className="size-3.5 text-green-600" />
-                              Pagar
-                            </Button>
-                          )}
+                          <Check className="size-3.5 text-green-600" />
+                          Pagar
+                        </Button>
+                      )}
+                      {/* Fatura não é entidade editável: só a conta tem edit/delete. */}
+                      {item.kind === 'bill' && (
+                        <>
                           <Button
                             variant="ghost"
                             size="icon-xs"
-                            onClick={() => navigate(`/contas-a-pagar/${bill.id}/editar`)}
+                            onClick={() => navigate(`/contas-a-pagar/${item.id}/editar`)}
                           >
                             <Pencil className="size-3" />
                           </Button>
-                          <Button variant="ghost" size="icon-xs" onClick={() => setDeleteId(bill.id)}>
+                          <Button variant="ghost" size="icon-xs" onClick={() => setDeleteId(item.id)}>
                             <Trash2 className="size-3 text-red-500" />
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                }
-
-                const cycle = row.data
-                return (
-                  <TableRow
-                    key={cycle.cycleId}
-                    className="cursor-pointer"
-                    onClick={() => setOpenCycle(cycle)}
-                  >
-                    <TableCell className="font-medium whitespace-normal">
-                      Fatura {cycle.paymentMethod.description}
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {cycle.itemCount} lançamento{cycle.itemCount > 1 ? 's' : ''}
-                      </span>
-                    </TableCell>
-                    <TableCell>{formatDate(cycle.dueDate)}</TableCell>
-                    <TableCell>{formatCurrency(cycle.total)}</TableCell>
-                    <TableCell>{cycle.paymentMethod.description}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          cycle.closedAt
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        }`}
-                      >
-                        {cycle.closedAt ? 'Pago' : 'Pendente'}
-                      </span>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-1">
-                        {!cycle.closedAt && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openPayModal(row)}
-                          >
-                            <Check className="size-3.5 text-green-600" />
-                            Pagar
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         )}
@@ -362,9 +290,9 @@ export function BillsListPage() {
 
       {openCycle && (
         <CycleItemsDialog
-          cycleId={openCycle.cycleId}
+          cycleId={openCycle.id}
           description={openCycle.paymentMethod.description}
-          total={openCycle.total}
+          total={openCycle.amount}
           onClose={() => setOpenCycle(null)}
         />
       )}
@@ -384,7 +312,7 @@ export function BillsListPage() {
             <h3 className="mb-4 text-lg font-semibold">
               {payTarget.kind === 'bill'
                 ? 'Pagar conta'
-                : `Pagar fatura · ${payTarget.description}`}
+                : `Pagar ${payTarget.description}`}
             </h3>
 
             <div className="flex flex-col gap-4">
@@ -415,9 +343,9 @@ export function BillsListPage() {
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Quita {payTarget.itemCount} lançamento
-                  {payTarget.itemCount > 1 ? 's' : ''} do ciclo —{' '}
+                  {(payTarget.itemCount ?? 0) > 1 ? 's' : ''} do ciclo —{' '}
                   <span className="font-medium text-foreground">
-                    {formatCurrency(payTarget.total)}
+                    {formatCurrency(payTarget.amount)}
                   </span>
                   .
                 </p>

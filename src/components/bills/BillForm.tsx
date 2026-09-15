@@ -74,18 +74,17 @@ export function BillForm() {
     e.preventDefault()
     setSaving(true)
 
-    // `none` vence numa data; o resto vence num dia do mês.
+    // Manda os dois; a frequência decide no backend qual vale.
     const data: CreateBillData = {
       description,
       predictedAmount: Number(predictedAmount),
       frequency,
       paymentMethodId,
+      dueDate: dueDate || undefined,
+      dueDay: Number(dueDay) || undefined,
       tagId: tagId || undefined,
       notes: notes || undefined,
       active,
-      ...(frequency === 'none'
-        ? { dueDate }
-        : { dueDay: Number(dueDay) }),
     }
 
     try {
@@ -172,18 +171,8 @@ export function BillForm() {
               </Select>
             </div>
 
-            {frequency === 'none' ? (
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="dueDate">Vencimento</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  required
-                />
-              </div>
-            ) : (
+            {/* Mensal vence num dia; avulsa e anual vencem numa data. */}
+            {frequency === 'monthly' ? (
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="dueDay">Dia do Vencimento</Label>
                 <Input
@@ -193,6 +182,17 @@ export function BillForm() {
                   max={31}
                   value={dueDay}
                   onChange={(e) => setDueDay(e.target.value)}
+                  required
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="dueDate">Vencimento</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
                   required
                 />
               </div>

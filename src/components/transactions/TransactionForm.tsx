@@ -91,19 +91,13 @@ export function TransactionForm() {
         })
         toast.success('Transação atualizada')
       } else {
-        // O backend resolve forma de pagamento e tags por texto, não por id.
-        const method = paymentMethods.find((pm) => pm.id === paymentMethodId)
-        const tagNames = tagIds
-          .map((tagId) => tags.find((tag) => tag.id === tagId)?.description)
-          .filter((name): name is string => Boolean(name))
-
         await createTransaction({
           description,
           amount,
           type,
-          paymentMethod: method?.description ?? '',
+          paymentMethodId,
           date,
-          tags: tagNames.length > 0 ? tagNames : undefined,
+          tagIds: tagIds.length > 0 ? tagIds : undefined,
           installments: Number(installments) || 1,
           notes: notes || undefined,
         })

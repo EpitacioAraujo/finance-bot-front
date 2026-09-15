@@ -24,43 +24,34 @@ export interface Bill {
   createdAt: string
 }
 
-/**
- * Uma ocorrência da conta dentro da janela — a lista expande recorrência, então
- * o mesmo `id` aparece em várias linhas com `occurrenceDate` diferente.
- */
-export interface BillView {
-  id: string
-  description: string
-  predictedAmount: number
-  occurrenceDate: string
-  frequency: string
-  paid: boolean
-  paidTransactionId: string | null
-  paidAmount: number | null
-  paymentMethod: { id: string; description: string }
-  tag: { id: string; description: string } | null
-  notes: string | null
-}
-
 export interface BillSummary {
   totalPredicted: number
   totalPaid: number
   totalPending: number
 }
 
-export interface BillListResult {
-  items: BillView[]
-  /** Cobre a janela inteira; o filtro de status só corta `items`. */
-  summary: BillSummary
+/** Conta ou fatura de cartão, já niveladas pelo backend. */
+export interface PayableItem {
+  kind: 'bill' | 'cycle'
+  /** bill.id ou cycle.id — é o que vai na URL de pay/edit/delete. */
+  id: string
+  /** Chave de linha: conta recorrente repete `id` por ocorrência. */
+  key: string
+  description: string
+  dueDate: string
+  amount: number
+  status: 'paid' | 'pending'
+  paymentMethod: { id: string; description: string }
+  /** Só cycle: compras na fatura. */
+  itemCount: number | null
 }
 
 /**
- * A tela de contas a pagar é conta + fatura de cartão. O backend junta e soma:
- * aqui só se renderiza.
+ * A tela de contas a pagar é conta + fatura de cartão. O backend junta, nivela
+ * e soma: aqui só se renderiza.
  */
 export interface PayableListResult {
-  bills: BillView[]
-  cycles: ConsolidatedView[]
+  items: PayableItem[]
   summary: BillSummary
 }
 
@@ -75,17 +66,4 @@ export interface ConsolidatedItem {
   /** '3/10' quando é parcela; nulo quando foi à vista. */
   installment: string | null
   paidAt: string | null
-}
-
-/** A fatura fechada do cartão, agregada por ciclo. */
-export interface ConsolidatedView {
-  cycleId: string
-  paymentMethod: { id: string; description: string }
-  /** '2026-03' */
-  referenceMonth: string
-  /** ISO completo: vem de query crua, não da entidade. */
-  dueDate: string
-  total: number
-  itemCount: number
-  closedAt: string | null
 }

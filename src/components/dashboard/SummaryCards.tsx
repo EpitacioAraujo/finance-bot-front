@@ -6,16 +6,16 @@ import { formatCurrency } from '@/lib/format'
 interface SummaryCardsProps {
   totalIncome: number
   totalExpense: number
+  balance: number
   loading?: boolean
 }
 
 export function SummaryCards({
   totalIncome,
   totalExpense,
+  balance,
   loading,
 }: SummaryCardsProps) {
-  const balance = totalIncome - totalExpense
-
   if (loading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

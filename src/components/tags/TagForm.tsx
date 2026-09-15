@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, Loader2 } from 'lucide-react'
-import { createTag, updateTag, listTags } from '@/api/tags'
+import { createTag, updateTag, getTag } from '@/api/tags'
 import { toast } from 'sonner'
 
 export function TagForm() {
@@ -19,10 +19,10 @@ export function TagForm() {
 
   useEffect(() => {
     if (!id) return
-    listTags().then((items) => {
-      const found = items.find((t) => t.id === id)
-      if (found) setDescription(found.description)
-    }).finally(() => setLoading(false))
+    getTag(id)
+      .then((tag) => setDescription(tag.description))
+      .catch(() => toast.error('Erro ao carregar tag'))
+      .finally(() => setLoading(false))
   }, [id])
 
   const handleSubmit = async (e: React.FormEvent) => {

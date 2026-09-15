@@ -6,8 +6,8 @@ import type {
 } from '@/types/transaction'
 
 export interface ListTransactionsParams {
-  from: string
-  to: string
+  from?: string
+  to?: string
   type?: TransactionType
   tagId?: string
   paymentMethodId?: string
@@ -29,11 +29,9 @@ export interface CreateTransactionData {
   description: string
   amount: number
   type: TransactionType
-  /** Nome da forma de pagamento: o backend resolve por texto, não por id. */
-  paymentMethod: string
+  paymentMethodId: string
   date?: string
-  /** Nomes das tags, não ids — o backend cria a que não existir. */
-  tags?: string[]
+  tagIds?: string[]
   installments?: number
   notes?: string
 }
@@ -64,7 +62,6 @@ export function deleteTransaction(id: string): Promise<void> {
   return del(`/transactions/${id}`)
 }
 
-/** Não existe bulk no backend: N deletes em paralelo. */
-export async function deleteTransactions(ids: string[]): Promise<void> {
-  await Promise.all(ids.map(deleteTransaction))
+export function deleteTransactions(ids: string[]): Promise<void> {
+  return post<void>('/transactions/bulk-delete', { ids })
 }

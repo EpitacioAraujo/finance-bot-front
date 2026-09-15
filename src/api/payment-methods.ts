@@ -5,6 +5,10 @@ export function listPaymentMethods(): Promise<PaymentMethod[]> {
   return get<PaymentMethod[]>('/payment-methods')
 }
 
+export function getPaymentMethod(id: string): Promise<PaymentMethod> {
+  return get<PaymentMethod>(`/payment-methods/${id}`)
+}
+
 export interface CreatePaymentMethodData {
   description: string
   kind: PaymentMethodKind

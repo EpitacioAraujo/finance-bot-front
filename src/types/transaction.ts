@@ -30,7 +30,9 @@ export interface Transaction {
   installments: number
   notes: string | null
   tags?: Tag[]
-  splits?: TransactionSplit[]
+  /** Vazio quando à vista; ordenado por `number`. */
+  splits: TransactionSplit[]
+  paidInstallments: number
   createdAt: string
 }
 

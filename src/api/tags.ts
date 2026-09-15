@@ -5,6 +5,10 @@ export function listTags(): Promise<Tag[]> {
   return get<Tag[]>('/tags')
 }
 
+export function getTag(id: string): Promise<Tag> {
+  return get<Tag>(`/tags/${id}`)
+}
+
 export function createTag(data: Pick<Tag, 'description'>): Promise<Tag> {
   return post<Tag>('/tags', data)
 }

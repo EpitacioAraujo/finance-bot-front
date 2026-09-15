@@ -7,7 +7,7 @@ import type {
 } from '@/types/bill'
 import type { Transaction } from '@/types/transaction'
 
-/** Conta e fatura na mesma janela, já somadas pelo backend. */
+/** Conta e fatura numa lista só, já niveladas e somadas pelo backend. */
 export function listPayables(params: {
   from: string
   to: string

@@ -81,12 +81,10 @@ export function TransactionTable({
                   <span>{t.description}</span>
                   <span className="text-xs text-muted-foreground">
                     {t.paymentMethod?.description}
-                    {t.splits && t.splits.length > 0 && (
+                    {t.installments > 1 && (
                       <>
                         {' '}&middot;{' '}
-                        {t.splits.filter((s) => s.paidAt !== null).length}/
-                        {t.splits.length} parcela{t.splits.length > 1 ? 's' : ''} paga
-                        {t.splits.length > 1 ? 's' : ''}
+                        {t.paidInstallments}/{t.installments} parcelas pagas
                       </>
                     )}
                   </span>

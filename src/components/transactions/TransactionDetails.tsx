@@ -60,9 +60,6 @@ export function TransactionDetails() {
     }
   }
 
-  const splits = [...(transaction?.splits ?? [])].sort((a, b) => a.number - b.number)
-  const paid = splits.filter((split) => split.paidAt).length
-
   return (
     <Dialog open onOpenChange={(open) => !open && close()}>
       <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto md:max-w-lg max-md:inset-0 max-md:h-full max-md:max-h-none max-md:w-full max-md:max-w-none max-md:translate-x-0 max-md:translate-y-0 max-md:rounded-none">
@@ -122,7 +119,7 @@ export function TransactionDetails() {
               )}
             </dl>
 
-            {splits.length === 0 ? (
+            {transaction.installments === 1 ? (
               <p className="text-sm text-muted-foreground">
                 Compra à vista — sem parcelas.
               </p>
@@ -131,7 +128,7 @@ export function TransactionDetails() {
                 <div className="flex items-baseline justify-between">
                   <h3 className="text-sm font-medium">Parcelas</h3>
                   <span className="text-xs text-muted-foreground">
-                    {paid}/{splits.length} paga{splits.length > 1 ? 's' : ''}
+                    {transaction.paidInstallments}/{transaction.installments} pagas
                   </span>
                 </div>
                 <div className="rounded-lg border border-border">
@@ -145,7 +142,7 @@ export function TransactionDetails() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {splits.map((split) => (
+                      {transaction.splits.map((split) => (
                         <TableRow key={split.id}>
                           <TableCell className="text-muted-foreground">
                             {split.number}
@@ -204,8 +201,8 @@ export function TransactionDetails() {
         message={
           transaction
             ? `Remover "${transaction.description}" (${formatCurrency(transaction.amount)})?${
-                splits.length > 0
-                  ? ` As ${splits.length} parcelas somem junto.`
+                transaction.installments > 1
+                  ? ` As ${transaction.installments} parcelas somem junto.`
                   : ''
               }`
             : 'Remover esta transação?'

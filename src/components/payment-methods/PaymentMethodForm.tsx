@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ArrowLeft, Loader2 } from 'lucide-react'
-import { createPaymentMethod, updatePaymentMethod, listPaymentMethods } from '@/api/payment-methods'
+import { createPaymentMethod, updatePaymentMethod, getPaymentMethod } from '@/api/payment-methods'
 import {
   PAYMENT_METHOD_KINDS,
   PAYMENT_METHOD_KIND_LABELS,
@@ -30,28 +30,28 @@ export function PaymentMethodForm() {
 
   useEffect(() => {
     if (!id) return
-    listPaymentMethods().then((items) => {
-      const found = items.find((pm) => pm.id === id)
-      if (found) {
+    getPaymentMethod(id)
+      .then((found) => {
         setDescription(found.description)
         setKind(found.kind)
         if (found.closingDay !== null) setClosingDay(String(found.closingDay))
         if (found.dueDay !== null) setDueDay(String(found.dueDay))
-        setShowInBills(found.showInBills ?? false)
-      }
-    }).finally(() => setLoading(false))
+        setShowInBills(found.showInBills)
+      })
+      .catch(() => toast.error('Erro ao carregar forma de pagamento'))
+      .finally(() => setLoading(false))
   }, [id])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
 
-    // Fechamento e vencimento são a fatura do cartão: só existem em `credit`.
+    // Manda os dias sempre; o backend zera fora do crédito.
     const data = {
       description,
       kind,
-      closingDay: kind === 'credit' ? Number(closingDay) || undefined : undefined,
-      dueDay: kind === 'credit' ? Number(dueDay) || undefined : undefined,
+      closingDay: Number(closingDay) || undefined,
+      dueDay: Number(dueDay) || undefined,
       showInBills,
     }
 

@@ -44,6 +44,7 @@ export default function DashboardPage() {
       <SummaryCards
         totalIncome={summary?.totalIncome ?? 0}
         totalExpense={summary?.totalExpense ?? 0}
+        balance={summary?.balance ?? 0}
         loading={loading}
       />
 

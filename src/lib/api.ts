@@ -1,5 +1,14 @@
 const BASE_URL = '/api'
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message)
+  }
+}
+
 /**
  * PROVISÓRIO, espelha o guard do backend: não existe autenticação, o usuário é
  * fixo e vem do build. Trocar quando entrar login de verdade.
@@ -32,7 +41,7 @@ async function apiFetch<T>(
     } catch {
       message = text || `Erro ${res.status}`
     }
-    throw new Error(message)
+    throw new ApiError(message, res.status)
   }
 
   if (res.status === 204) {

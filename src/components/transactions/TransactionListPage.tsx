@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { listTransactions, deleteTransaction, deleteTransactions } from '@/api/transactions'
+import { ApiError } from '@/lib/api'
 import { listPaymentMethods } from '@/api/payment-methods'
 import { listTags } from '@/api/tags'
 import type { PaymentMethod } from '@/types/payment-method'
@@ -39,10 +40,6 @@ type PageState =
   | { status: 'loading-more'; data: Transaction[]; total: number }
 
 const PAGE_SIZE = 20
-
-// ponytail: a tela não tem filtro de período e o backend exige janela; quando
-// entrar um seletor de mês aqui, trocar por monthRange().
-const FULL_RANGE = { from: '1900-01-01', to: '2999-12-31' }
 
 export function TransactionListPage() {
   const navigate = useNavigate()
@@ -92,8 +89,8 @@ export function TransactionListPage() {
   }
 
   const query = {
-    from: from || FULL_RANGE.from,
-    to: to || FULL_RANGE.to,
+    from: from || undefined,
+    to: to || undefined,
     paymentMethodId: paymentMethodId || undefined,
     tagId: tagId || undefined,
     type: (type || undefined) as 'income' | 'expense' | undefined,
@@ -176,36 +173,24 @@ export function TransactionListPage() {
 
     try {
       await deleteTransaction(confirmDeleteId)
-      setState((prev) => {
-        if (prev.status !== 'loaded' && prev.status !== 'loading-more')
-          return prev
-        const filtered = prev.data.filter((t) => t.id !== confirmDeleteId)
-        return filtered.length === 0
-          ? { status: 'empty' }
-          : { ...prev, data: filtered, total: prev.total - 1 }
-      })
-      setConfirmDeleteId(null)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao remover transação'
-      if (
-        message.includes('não encontrada') ||
-        message.includes('not found')
-      ) {
-        setState((prev) => {
-          if (prev.status !== 'loaded' && prev.status !== 'loading-more')
-            return prev
-          const filtered = prev.data.filter((t) => t.id !== confirmDeleteId)
-          return filtered.length === 0
-            ? { status: 'empty' }
-            : { ...prev, data: filtered, total: prev.total - 1 }
-        })
-        setConfirmDeleteId(null)
-      } else {
-        setDeleteError(message)
+      // 404 é "já sumiu" (o bot apagou antes): some da lista do mesmo jeito.
+      if (!(err instanceof ApiError && err.status === 404)) {
+        setDeleteError(err instanceof Error ? err.message : 'Erro ao remover transação')
+        setDeleting(false)
+        return
       }
-    } finally {
-      setDeleting(false)
     }
+    setState((prev) => {
+      if (prev.status !== 'loaded' && prev.status !== 'loading-more')
+        return prev
+      const filtered = prev.data.filter((t) => t.id !== confirmDeleteId)
+      return filtered.length === 0
+        ? { status: 'empty' }
+        : { ...prev, data: filtered, total: prev.total - 1 }
+    })
+    setConfirmDeleteId(null)
+    setDeleting(false)
   }, [confirmDeleteId])
 
   const handleCancelDelete = useCallback(() => {
