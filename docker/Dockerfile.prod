@@ -11,18 +11,13 @@ RUN pnpm build
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# O front chama /api; em dev quem reescreve é o proxy do vite, aqui é o nginx.
-# A barra final do proxy_pass é o que remove o prefixo /api.
+# Só estático + fallback de SPA. Quem leva /api ao backend é o nginx da infra;
+# esta imagem não conhece nenhum outro serviço.
 RUN printf '%s\n' \
   'server {' \
   '  listen 80;' \
   '  root /usr/share/nginx/html;' \
   '  index index.html;' \
-  '  location /api/ {' \
-  '    proxy_pass http://backend:3000/;' \
-  '    proxy_set_header Host $host;' \
-  '    proxy_set_header X-Real-IP $remote_addr;' \
-  '  }' \
   '  location / {' \
   '    try_files $uri $uri/ /index.html;' \
   '  }' \
