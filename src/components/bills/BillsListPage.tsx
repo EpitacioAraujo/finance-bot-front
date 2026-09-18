@@ -23,18 +23,14 @@ import { LoadingState } from '@/components/LoadingState'
 import { EmptyState } from '@/components/EmptyState'
 import { listPayables, deleteBill, payBill, payConsolidated } from '@/api/bills'
 import type { BillSummary, PayableItem } from '@/types/bill'
-import { formatCurrency, formatDate, monthRange } from '@/lib/format'
+import { competenciaAtual, formatCurrency, formatDate, monthRange } from '@/lib/format'
 import { Plus, Pencil, Trash2, Check } from 'lucide-react'
 import { FilterSheet } from '@/components/FilterSheet'
+import { MonthSelector } from '@/components/MonthSelector'
 import { CycleItemsDialog } from './CycleItemsDialog'
 import { toast } from 'sonner'
 
 const todayISO = () => new Date().toISOString().split('T')[0]
-
-function competenciaAtual(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
 
 const EMPTY_SUMMARY: BillSummary = {
   totalPredicted: 0,
@@ -60,11 +56,6 @@ export function BillsListPage() {
     setSearchParams(next)
   }
 
-  const monthLabel = new Date(
-    Number(competencia.slice(0, 4)),
-    Number(competencia.slice(5, 7)) - 1,
-    1,
-  ).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState<PayableItem[]>([])
   const [summary, setSummary] = useState<BillSummary>(EMPTY_SUMMARY)
@@ -136,16 +127,20 @@ export function BillsListPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Contas a Pagar</h1>
-          <p className="text-sm text-muted-foreground first-letter:uppercase">
-            {monthLabel}
-            {statusFilter !== 'all' &&
-              ` · ${statusFilter === 'paid' ? 'pagas' : 'pendentes'}`}
-          </p>
-        </div>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+        <h1 className="text-xl font-semibold">Contas a Pagar</h1>
         <div className="flex items-center gap-2">
+          <MonthSelector
+            month={competencia}
+            onChange={(v) => setFilter('competencia', v)}
+          />
+          {statusFilter !== 'all' && (
+            <span className="text-sm text-muted-foreground">
+              · {statusFilter === 'paid' ? 'pagas' : 'pendentes'}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2">
           <FilterSheet
             active={activeFilters}
             onClear={() => setSearchParams({})}
@@ -179,8 +174,8 @@ export function BillsListPage() {
             </div>
           </FilterSheet>
 
-          <Button onClick={() => navigate('/contas-a-pagar/nova')}>
-            <Plus className="size-4" /> Nova Conta
+          <Button size="icon" aria-label="Nova conta" onClick={() => navigate('/contas-a-pagar/nova')}>
+            <Plus className="size-4" />
           </Button>
         </div>
       </div>

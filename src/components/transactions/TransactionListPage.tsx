@@ -5,7 +5,8 @@ import { listPaymentMethods } from '@/api/payment-methods'
 import { listTags } from '@/api/tags'
 import type { PaymentMethod } from '@/types/payment-method'
 import type { Tag } from '@/types/tag'
-import { formatDate } from '@/lib/format'
+import { competenciaAtual, monthRange } from '@/lib/format'
+import { MonthSelector } from '@/components/MonthSelector'
 import { FilterSheet } from '@/components/FilterSheet'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -63,9 +64,11 @@ export function TransactionListPage() {
   const paymentMethodId = searchParams.get('paymentMethodId') ?? ''
   const tagId = searchParams.get('tagId') ?? ''
   const type = searchParams.get('type') ?? ''
-  const from = searchParams.get('from') ?? ''
-  const to = searchParams.get('to') ?? ''
-  const activeFilters = [paymentMethodId, tagId, type, from, to].filter(Boolean).length
+  const currentMonth = competenciaAtual()
+  const competencia = searchParams.get('competencia') ?? currentMonth
+  // O mês é navegação, não filtro: entra na contagem da sheet mas não na faixa.
+  const fieldFilters = [paymentMethodId, tagId, type].filter(Boolean).length
+  const activeFilters = fieldFilters + (competencia !== currentMonth ? 1 : 0)
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -89,8 +92,7 @@ export function TransactionListPage() {
   }
 
   const query = {
-    from: from || undefined,
-    to: to || undefined,
+    ...monthRange(competencia),
     paymentMethodId: paymentMethodId || undefined,
     tagId: tagId || undefined,
     type: (type || undefined) as 'income' | 'expense' | undefined,
@@ -112,7 +114,7 @@ export function TransactionListPage() {
       .catch((err: Error) => {
         setState({ status: 'error', message: err.message })
       })
-  }, [savedAt, from, to, paymentMethodId, tagId, type])
+  }, [savedAt, competencia, paymentMethodId, tagId, type])
 
   const loadMore = useCallback(() => {
     if (state.status !== 'loaded') return
@@ -142,7 +144,7 @@ export function TransactionListPage() {
           return { status: 'loaded', data: prev.data, total: prev.data.length }
         })
       })
-  }, [state, from, to, paymentMethodId, tagId, type])
+  }, [state, competencia, paymentMethodId, tagId, type])
 
   const handleDelete = useCallback((id: string) => {
     setDeleteError(null)
@@ -280,14 +282,13 @@ export function TransactionListPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Transações</h1>
-          <p className="text-sm text-muted-foreground">
-            Gerencie suas receitas e despesas
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+        <h1 className="text-xl font-semibold">Transações</h1>
+        <MonthSelector
+          month={competencia}
+          onChange={(v) => setFilter('competencia', v)}
+        />
+        <div className="flex items-center justify-end gap-2">
           <FilterSheet
             active={activeFilters}
             onClear={() => setSearchParams({})}
@@ -364,49 +365,36 @@ export function TransactionListPage() {
               </Select>
             </div>
 
-            <div className="flex gap-2">
-              <div className="flex flex-1 flex-col gap-1.5">
-                <Label htmlFor="f-from">De</Label>
-                <Input
-                  id="f-from"
-                  type="date"
-                  value={from}
-                  onChange={(e) => setFilter('from', e.target.value)}
-                />
-              </div>
-              <div className="flex flex-1 flex-col gap-1.5">
-                <Label htmlFor="f-to">Até</Label>
-                <Input
-                  id="f-to"
-                  type="date"
-                  value={to}
-                  onChange={(e) => setFilter('to', e.target.value)}
-                />
-              </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="f-comp">Competência</Label>
+              <Input
+                id="f-comp"
+                type="month"
+                value={competencia}
+                onChange={(e) => setFilter('competencia', e.target.value)}
+              />
             </div>
           </FilterSheet>
 
           <Button
+            size="icon"
+            aria-label="Nova transação"
             onClick={() =>
               navigate({ pathname: '/transactions/new', search: location.search })
             }
           >
             <Plus className="size-4" />
-            Nova Transação
           </Button>
         </div>
       </div>
 
-      {activeFilters > 0 && (
+      {fieldFilters > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
           <span className="text-muted-foreground">Filtrado por</span>
           {[
             paymentMethods.find((pm) => pm.id === paymentMethodId)?.description,
             tags.find((tag) => tag.id === tagId)?.description,
             type ? (type === 'income' ? 'Receitas' : 'Despesas') : undefined,
-            from || to
-              ? `${from ? formatDate(from) : '…'} – ${to ? formatDate(to) : '…'}`
-              : undefined,
           ]
             .filter(Boolean)
             .map((label) => (

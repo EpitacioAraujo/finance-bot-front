@@ -10,10 +10,12 @@ export function MonthSelector({ month, onChange }: MonthSelectorProps) {
   const [year, monthNum] = month.split('-').map(Number)
   const date = new Date(year, monthNum - 1, 1)
 
-  const label = date.toLocaleDateString('pt-BR', {
+  const raw = date.toLocaleDateString('pt-BR', {
     month: 'long',
     year: 'numeric',
   })
+  // Só a inicial: `capitalize` do CSS pegaria o "de" também.
+  const label = raw.charAt(0).toUpperCase() + raw.slice(1)
 
   const goToPrev = () => {
     const prev = new Date(year, monthNum - 2, 1)
@@ -34,7 +36,7 @@ export function MonthSelector({ month, onChange }: MonthSelectorProps) {
       <Button variant="ghost" size="icon-sm" onClick={goToPrev} aria-label="Mes anterior">
         <ChevronLeft className="size-4" />
       </Button>
-      <span className="min-w-[140px] text-center text-lg font-medium capitalize">
+      <span className="min-w-[140px] text-center text-lg font-medium">
         {label}
       </span>
       <Button variant="ghost" size="icon-sm" onClick={goToNext} aria-label="Proximo mes">

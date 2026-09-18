@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getDashboard } from '@/api/reports'
-import { MonthSelector } from './MonthSelector'
+import { MonthSelector } from '@/components/MonthSelector'
 import { SummaryCards } from './SummaryCards'
 import { IncomeExpenseChart } from './IncomeExpenseChart'
 import { ExpenseBreakdown } from './ExpenseBreakdown'
@@ -27,7 +27,8 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex justify-center">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+          <h1 className="text-xl font-semibold">Dashboard</h1>
           <MonthSelector month={month} onChange={setMonth} />
         </div>
         <ErrorState message={error} />
@@ -37,7 +38,8 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-center">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+        <h1 className="text-xl font-semibold">Dashboard</h1>
         <MonthSelector month={month} onChange={setMonth} />
       </div>
 
