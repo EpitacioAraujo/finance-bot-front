@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from './components/layout/AppLayout'
 import { ThemeProvider } from './hooks/use-theme'
 import DashboardPage from './components/dashboard/DashboardPage'
@@ -11,7 +11,7 @@ import { PaymentMethodListPage } from './components/payment-methods/PaymentMetho
 import { PaymentMethodForm } from './components/payment-methods/PaymentMethodForm'
 import { TagListPage } from './components/tags/TagListPage'
 import { TagForm } from './components/tags/TagForm'
-import { BillsListPage } from './components/bills/BillsListPage'
+import { PlanningPage } from './components/bills/PlanningPage'
 import { BillForm } from './components/bills/BillForm'
 import './index.css'
 
@@ -33,9 +33,11 @@ createRoot(document.getElementById('root')!).render(
             <Route path="tags" element={<TagListPage />} />
             <Route path="tags/new" element={<TagForm />} />
             <Route path="tags/:id/edit" element={<TagForm />} />
-            <Route path="contas-a-pagar" element={<BillsListPage />} />
-            <Route path="contas-a-pagar/nova" element={<BillForm />} />
-            <Route path="contas-a-pagar/:id/editar" element={<BillForm />} />
+            <Route path="planejamento" element={<PlanningPage />} />
+            <Route path="planejamento/nova" element={<BillForm />} />
+            <Route path="planejamento/:id/editar" element={<BillForm />} />
+            {/* URL sem rota (link velho, digitada errada) cai no dashboard em vez de tela branca. */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </BrowserRouter>

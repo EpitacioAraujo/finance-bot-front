@@ -1,4 +1,4 @@
-import type { Transaction } from '../types/transaction'
+import { TransactionType, type Transaction } from '../types/transaction'
 import {
   Table,
   TableBody,
@@ -58,7 +58,7 @@ export function TransactionTable({
       </TableHeader>
       <TableBody>
         {transactions.map((t) => {
-          const isIncome = t.type === 'income'
+          const isIncome = t.type === TransactionType.Income
           return (
             <TableRow
               key={t.id}

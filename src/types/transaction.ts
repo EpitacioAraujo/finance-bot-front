@@ -1,8 +1,10 @@
 import type { PaymentMethod } from './payment-method'
 import type { Tag } from './tag'
 
-export const TRANSACTION_TYPES = ['income', 'expense'] as const
-export type TransactionType = (typeof TRANSACTION_TYPES)[number]
+export enum TransactionType {
+  Income = 'income',
+  Expense = 'expense',
+}
 
 /** Só existe quando installments > 1. Compra à vista não gera linha. */
 export interface TransactionSplit {

@@ -24,12 +24,14 @@ import {
   type BillFrequency,
 } from '@/types/bill'
 import { toast } from 'sonner'
+import { TransactionType } from '@/types/transaction'
 
 export function BillForm() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const isEdit = Boolean(id)
 
+  const [type, setType] = useState<TransactionType>(TransactionType.Expense)
   const [description, setDescription] = useState('')
   const [predictedAmount, setPredictedAmount] = useState('')
   const [frequency, setFrequency] = useState<BillFrequency>('monthly')
@@ -56,6 +58,7 @@ export function BillForm() {
     if (!id) return
     getBill(id)
       .then((bill) => {
+        setType(bill.type)
         setDescription(bill.description)
         setPredictedAmount(String(bill.predictedAmount))
         setFrequency(bill.frequency)
@@ -75,7 +78,8 @@ export function BillForm() {
     setSaving(true)
 
     // Manda os dois; a frequência decide no backend qual vale.
-    const data: CreateBillData = {
+    // Tipo só vai no create: não muda depois, e o backend rejeita campo fora do DTO.
+    const data: Omit<CreateBillData, 'type'> = {
       description,
       predictedAmount: Number(predictedAmount),
       frequency,
@@ -92,10 +96,10 @@ export function BillForm() {
         await updateBill(id, data)
         toast.success('Conta atualizada')
       } else {
-        await createBill(data)
+        await createBill({ ...data, type })
         toast.success('Conta criada')
       }
-      navigate('/contas-a-pagar')
+      navigate('/planejamento')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao salvar')
     } finally {
@@ -114,11 +118,11 @@ export function BillForm() {
   return (
     <div className="mx-auto w-full max-w-lg">
       <div className="mb-6 flex items-center gap-2">
-        <Button variant="ghost" size="icon-sm" onClick={() => navigate('/contas-a-pagar')}>
+        <Button variant="ghost" size="icon-sm" onClick={() => navigate('/planejamento')}>
           <ArrowLeft className="size-4" />
         </Button>
         <h1 className="text-xl font-semibold">
-          {isEdit ? 'Editar' : 'Nova'} Conta a Pagar
+          {isEdit ? 'Editar' : 'Nova'} Conta
         </h1>
       </div>
 
@@ -128,6 +132,25 @@ export function BillForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="type">Tipo</Label>
+              {/* Tipo não muda depois de criada: a transação que quita já nasceu com ele. */}
+              <Select
+                items={{ [TransactionType.Expense]: 'A pagar', [TransactionType.Income]: 'A receber' }}
+                value={type}
+                onValueChange={(v) => v && setType(v as TransactionType)}
+                disabled={isEdit}
+              >
+                <SelectTrigger id="type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={TransactionType.Expense}>A pagar</SelectItem>
+                  <SelectItem value={TransactionType.Income}>A receber</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="desc">Descricao</Label>
               <Input
@@ -255,7 +278,7 @@ export function BillForm() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => navigate('/contas-a-pagar')}>
+              <Button type="button" variant="outline" onClick={() => navigate('/planejamento')}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={saving}>

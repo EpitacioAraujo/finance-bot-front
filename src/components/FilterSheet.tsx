@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { SlidersHorizontal } from 'lucide-react'
+import { Filter } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -29,7 +29,7 @@ export function FilterSheet({ active, onClear, children }: FilterSheetProps) {
           <Button variant="outline" size="icon" className="relative" aria-label="Filtros" />
         }
       >
-        <SlidersHorizontal className="size-4" />
+        <Filter className="size-4" />
         {active > 0 && (
           <span className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
             {active}

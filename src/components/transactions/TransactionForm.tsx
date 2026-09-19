@@ -27,6 +27,7 @@ import { listPaymentMethods } from '@/api/payment-methods'
 import { listTags } from '@/api/tags'
 import type { PaymentMethod } from '@/types/payment-method'
 import type { Tag } from '@/types/tag'
+import { TransactionType } from '@/types/transaction'
 import { toast } from 'sonner'
 
 export function TransactionForm() {
@@ -35,7 +36,7 @@ export function TransactionForm() {
   const { id } = useParams<{ id: string }>()
   const isEdit = Boolean(id)
 
-  const [type, setType] = useState<'income' | 'expense'>('expense')
+  const [type, setType] = useState<TransactionType>(TransactionType.Expense)
   const [amount, setAmount] = useState(0)
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
@@ -139,17 +140,17 @@ export function TransactionForm() {
               <Label htmlFor="type">Tipo</Label>
               {/* O backend não aceita trocar o tipo depois de criada. */}
               <Select
-                items={{ expense: 'Despesa', income: 'Receita' }}
+                items={{ [TransactionType.Expense]: 'Despesa', [TransactionType.Income]: 'Receita' }}
                 value={type}
-                onValueChange={(v) => setType(v as 'income' | 'expense')}
+                onValueChange={(v) => setType(v as TransactionType)}
                 disabled={isEdit}
               >
                 <SelectTrigger id="type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="expense">Despesa</SelectItem>
-                  <SelectItem value="income">Receita</SelectItem>
+                  <SelectItem value={TransactionType.Expense}>Despesa</SelectItem>
+                  <SelectItem value={TransactionType.Income}>Receita</SelectItem>
                 </SelectContent>
               </Select>
             </div>

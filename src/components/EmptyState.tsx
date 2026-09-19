@@ -9,9 +9,6 @@ export function EmptyState({ message }: { message?: string }) {
       <p className="text-sm text-muted-foreground">
         {message ?? 'Nenhuma transação encontrada'}
       </p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        As transações aparecerão aqui após serem registradas pelo WhatsApp.
-      </p>
     </div>
   )
 }

@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Loader2, Pencil, Trash2 } from 'lucide-react'
 import { deleteTransaction, getTransaction } from '@/api/transactions'
-import type { Transaction } from '@/types/transaction'
+import { TransactionType, type Transaction } from '@/types/transaction'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 
@@ -87,7 +87,7 @@ export function TransactionDetails() {
               <div>
                 <dt className="text-muted-foreground text-xs">Tipo</dt>
                 <dd className="font-medium">
-                  {transaction.type === 'income' ? 'Receita' : 'Despesa'}
+                  {transaction.type === TransactionType.Income ? 'Receita' : 'Despesa'}
                 </dd>
               </div>
               <div>

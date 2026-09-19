@@ -1,3 +1,5 @@
+import type { TransactionType } from './transaction'
+
 export const BILL_FREQUENCIES = ['none', 'monthly', 'yearly'] as const
 export type BillFrequency = (typeof BILL_FREQUENCIES)[number]
 
@@ -11,6 +13,8 @@ export const BILL_FREQUENCY_LABELS: Record<BillFrequency, string> = {
 export interface Bill {
   id: string
   description: string
+  /** expense = a pagar, income = a receber. */
+  type: TransactionType
   predictedAmount: number
   /** Preenchido só quando frequency = none. */
   dueDate: string | null
@@ -33,6 +37,8 @@ export interface BillSummary {
 /** Conta ou fatura de cartão, já niveladas pelo backend. */
 export interface PayableItem {
   kind: 'bill' | 'cycle'
+  /** Fatura é sempre expense; conta carrega o dela. */
+  type: TransactionType
   /** bill.id ou cycle.id — é o que vai na URL de pay/edit/delete. */
   id: string
   /** Chave de linha: conta recorrente repete `id` por ocorrência. */
@@ -48,7 +54,7 @@ export interface PayableItem {
 
 /**
  * A tela de contas a pagar é conta + fatura de cartão. O backend junta, nivela
- * e soma: aqui só se renderiza.
+ * e soma: aqui só se renderiza. Contas a receber usam o mesmo shape, sem fatura.
  */
 export interface PayableListResult {
   items: PayableItem[]

@@ -5,9 +5,9 @@ import type {
   ConsolidatedItem,
   PayableListResult,
 } from '@/types/bill'
-import type { Transaction } from '@/types/transaction'
+import type { Transaction, TransactionType } from '@/types/transaction'
 
-/** Conta e fatura numa lista só, já niveladas e somadas pelo backend. */
+/** Conta (a pagar e a receber) e fatura numa lista só, já niveladas pelo backend. */
 export function listPayables(params: {
   from: string
   to: string
@@ -22,6 +22,7 @@ export function getBill(id: string): Promise<Bill> {
 
 export interface CreateBillData {
   description: string
+  type: TransactionType
   predictedAmount: number
   frequency: BillFrequency
   paymentMethodId: string

@@ -13,7 +13,9 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar'
+import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Toaster } from 'sonner'
 import {
@@ -21,16 +23,17 @@ import {
   ArrowLeftRight,
   CreditCard,
   Tags,
-  Receipt,
+  ArrowUpDown,
   Sun,
   Moon,
+  PanelLeftClose,
 } from 'lucide-react'
 import { useTheme } from '@/hooks/use-theme'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/transactions', label: 'Transações', icon: ArrowLeftRight },
-  { to: '/contas-a-pagar', label: 'Contas a Pagar', icon: Receipt },
+  { to: '/planejamento', label: 'Planejamento', icon: ArrowUpDown },
   { to: '/payment-methods', label: 'Formas de Pagamento', icon: CreditCard },
   { to: '/tags', label: 'Tags', icon: Tags },
 ]
@@ -39,13 +42,20 @@ function AppSidebar() {
   const { theme, toggle } = useTheme()
   const location = useLocation()
   const navigate = useNavigate()
+  const { setOpenMobile, toggleSidebar } = useSidebar()
+
+  // No mobile o Sheet não fecha sozinho ao navegar.
+  const go = (to: string) => {
+    navigate(to)
+    setOpenMobile(false)
+  }
 
   return (
     <Sidebar>
-      <SidebarHeader>
+      <SidebarHeader className="flex-row items-center">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" onClick={() => navigate('/')}>
+            <SidebarMenuButton size="lg" onClick={() => go('/')}>
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <LayoutDashboard className="size-4" />
               </div>
@@ -56,6 +66,9 @@ function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <Button variant="ghost" size="icon-sm" onClick={toggleSidebar} aria-label="Recolher menu">
+          <PanelLeftClose />
+        </Button>
       </SidebarHeader>
 
       <SidebarContent>
@@ -70,7 +83,7 @@ function AppSidebar() {
                     <SidebarMenuButton
                       isActive={isActive}
                       tooltip={item.label}
-                      onClick={() => navigate(item.to)}
+                      onClick={() => go(item.to)}
                     >
                       <item.icon />
                       <span>{item.label}</span>

@@ -32,11 +32,11 @@ export function MonthSelector({ month, onChange }: MonthSelectorProps) {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-5">
       <Button variant="ghost" size="icon-sm" onClick={goToPrev} aria-label="Mes anterior">
         <ChevronLeft className="size-4" />
       </Button>
-      <span className="min-w-[140px] text-center text-lg font-medium">
+      <span className="text-base font-medium whitespace-nowrap md:text-lg">
         {label}
       </span>
       <Button variant="ghost" size="icon-sm" onClick={goToNext} aria-label="Proximo mes">
