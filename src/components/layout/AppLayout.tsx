@@ -29,6 +29,7 @@ import {
   PanelLeftClose,
 } from 'lucide-react'
 import { useTheme } from '@/hooks/use-theme'
+import { VoiceFab } from '@/components/voice/VoiceFab'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -124,6 +125,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </SidebarInset>
+      <VoiceFab />
       <Toaster position="bottom-right" richColors closeButton />
     </SidebarProvider>
   )

@@ -120,3 +120,14 @@
     font-family: var(--font-sans);
   }
 }
+
+/* Respiração das barras do assistente quando não há voz entrando. */
+@keyframes voice-idle {
+  0%,
+  100% {
+    height: 14%;
+  }
+  50% {
+    height: 46%;
+  }
+}

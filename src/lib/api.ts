@@ -62,6 +62,11 @@ export async function post<T>(endpoint: string, body?: unknown): Promise<T> {
   })
 }
 
+/** Multipart: quem põe o boundary é o navegador, então nada de Content-Type. */
+export async function postForm<T>(endpoint: string, body: FormData): Promise<T> {
+  return apiFetch<T>(endpoint, { method: 'POST', body })
+}
+
 export async function patch<T>(endpoint: string, body: unknown): Promise<T> {
   return apiFetch<T>(endpoint, {
     method: 'PATCH',
