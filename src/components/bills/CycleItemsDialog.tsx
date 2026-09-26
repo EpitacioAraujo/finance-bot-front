@@ -86,9 +86,9 @@ export function CycleItemsDialog({
                       </TableCell>
                       <TableCell className="whitespace-normal">
                         {item.description}
-                        {item.installment && (
+                        {item.tranche && (
                           <span className="ml-2 text-xs text-muted-foreground">
-                            {item.installment}
+                            {item.tranche}
                           </span>
                         )}
                       </TableCell>

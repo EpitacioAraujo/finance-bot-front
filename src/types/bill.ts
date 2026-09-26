@@ -70,6 +70,6 @@ export interface ConsolidatedItem {
   /** Data da compra, não do vencimento. */
   date: string
   /** '3/10' quando é parcela; nulo quando foi à vista. */
-  installment: string | null
+  tranche: string | null
   paidAt: string | null
 }

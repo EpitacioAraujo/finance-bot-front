@@ -3,6 +3,7 @@ import type {
   Transaction,
   TransactionListResult,
   TransactionType,
+  TrancheDueListResult,
 } from '@/types/transaction'
 
 export interface ListTransactionsParams {
@@ -19,6 +20,13 @@ export function listTransactions(
   params: ListTransactionsParams,
 ): Promise<TransactionListResult> {
   return get<TransactionListResult>(`/transactions?${query({ ...params })}`)
+}
+
+/** A mesma janela, ancorada no vencimento da tranche em vez da data da compra. */
+export function listTranchesDue(
+  params: ListTransactionsParams,
+): Promise<TrancheDueListResult> {
+  return get<TrancheDueListResult>(`/tranches?${query({ ...params })}`)
 }
 
 export function getTransaction(id: string): Promise<Transaction> {
@@ -60,8 +68,4 @@ export function updateTransaction(
 
 export function deleteTransaction(id: string): Promise<void> {
   return del(`/transactions/${id}`)
-}
-
-export function deleteTransactions(ids: string[]): Promise<void> {
-  return post<void>('/transactions/bulk-delete', { ids })
 }

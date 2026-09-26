@@ -119,56 +119,54 @@ export function TransactionDetails() {
               )}
             </dl>
 
-            {transaction.installments === 1 ? (
-              <p className="text-sm text-muted-foreground">
-                Compra à vista — sem parcelas.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-baseline justify-between">
-                  <h3 className="text-sm font-medium">Parcelas</h3>
-                  <span className="text-xs text-muted-foreground">
-                    {transaction.paidInstallments}/{transaction.installments} pagas
-                  </span>
-                </div>
-                <div className="rounded-lg border border-border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-10">#</TableHead>
-                        <TableHead>Vencimento</TableHead>
-                        <TableHead className="text-right">Valor</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {transaction.splits.map((split) => (
-                        <TableRow key={split.id}>
-                          <TableCell className="text-muted-foreground">
-                            {split.number}
-                          </TableCell>
-                          <TableCell>{formatDate(split.dueDate)}</TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatCurrency(split.amount)}
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                                split.paidAt
-                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                              }`}
-                            >
-                              {split.paidAt ? 'Paga' : 'Em aberto'}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+            {/* À vista também tem linha: é ela que diz quando o dinheiro sai —
+                no crédito, o vencimento da fatura, não a data da compra. */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-baseline justify-between">
+                <h3 className="text-sm font-medium">
+                  {transaction.installments > 1 ? 'Parcelas' : 'Pagamento'}
+                </h3>
+                <span className="text-xs text-muted-foreground">
+                  {transaction.paidTranches}/{transaction.installments} pagas
+                </span>
               </div>
-            )}
+              <div className="rounded-lg border border-border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">#</TableHead>
+                      <TableHead>Vencimento</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transaction.tranches.map((tranche) => (
+                      <TableRow key={tranche.id}>
+                        <TableCell className="text-muted-foreground">
+                          {tranche.number}
+                        </TableCell>
+                        <TableCell>{formatDate(tranche.dueDate)}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCurrency(tranche.amount)}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                              tranche.paidAt
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            }`}
+                          >
+                            {tranche.paidAt ? 'Paga' : 'Em aberto'}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
 
             <div className="flex justify-end gap-2">
               <Button

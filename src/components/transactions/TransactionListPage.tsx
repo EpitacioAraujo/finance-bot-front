@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { listTransactions, deleteTransaction, deleteTransactions } from '@/api/transactions'
+import { useCallback, useEffect, useState } from 'react'
+import { listTranchesDue, deleteTransaction } from '@/api/transactions'
 import { ApiError } from '@/lib/api'
 import { listPaymentMethods } from '@/api/payment-methods'
 import { listTags } from '@/api/tags'
@@ -19,42 +19,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { Transaction } from '@/types/transaction'
-import { TransactionTable } from '@/components/TransactionTable'
+import type { TrancheDue } from '@/types/transaction'
+import { TrancheTable } from '@/components/TrancheTable'
 import { LoadingState } from '@/components/LoadingState'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import {
   Outlet,
   useLocation,
   useNavigate,
   useSearchParams,
 } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
 
 type PageState =
   | { status: 'loading' }
   | { status: 'error'; message?: string }
-  | { status: 'empty' }
-  | { status: 'loaded'; data: Transaction[]; total: number }
-  | { status: 'loading-more'; data: Transaction[]; total: number }
+  | { status: 'loaded'; data: TrancheDue[]; total: number }
 
-const PAGE_SIZE = 20
+/**
+ * Um mês de parcelas cabe numa página; o rodapé avisa se não couber.
+ * ponytail: teto de 200, vira scroll infinito se alguém passar disso.
+ */
+const LIMIT = 200
 
 export function TransactionListPage() {
   const navigate = useNavigate()
   const [state, setState] = useState<PageState>({ status: 'loading' })
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
-  const [bulkDeleting, setBulkDeleting] = useState(false)
-  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null)
-  const loaderRef = useRef<HTMLDivElement>(null)
   const location = useLocation()
   // A lista fica montada atrás do modal do formulário, então salvar não a
   // remonta mais: o form avisa por state e isto recarrega.
@@ -101,56 +97,31 @@ export function TransactionListPage() {
   }
 
   useEffect(() => {
-    listTransactions({ ...query, limit: PAGE_SIZE, offset: 0 })
-      .then((result) => {
-        if (result.items.length === 0) {
-          setState({ status: 'empty' })
-        } else {
-          setState({
-            status: 'loaded',
-            data: result.items,
-            total: result.total,
-          })
-        }
-      })
-      .catch((err: Error) => {
-        setState({ status: 'error', message: err.message })
-      })
+    setState({ status: 'loading' })
+    listTranchesDue({ ...query, limit: LIMIT, offset: 0 })
+      .then((result) =>
+        setState({ status: 'loaded', data: result.items, total: result.total }),
+      )
+      .catch((err: Error) => setState({ status: 'error', message: err.message }))
   }, [savedAt, competencia, paymentMethodId, tagId, type])
 
-  const loadMore = useCallback(() => {
-    if (state.status !== 'loaded') return
-    if (state.data.length >= state.total) return
-
-    const offset = state.data.length
-    setState({ status: 'loading-more', data: state.data, total: state.total })
-
-    listTransactions({ ...query, limit: PAGE_SIZE, offset })
-      .then((result) => {
-        setState((prev) => {
-          const currentData =
-            prev.status === 'loaded' || prev.status === 'loading-more'
-              ? prev.data
-              : []
-          return {
-            status: 'loaded',
-            data: [...currentData, ...result.items],
-            total: result.total,
+  /** Tira da tela toda linha das compras removidas — inclusive as irmãs. */
+  const dropTransactions = useCallback((ids: string[]) => {
+    const gone = new Set(ids)
+    setState((prev) =>
+      prev.status === 'loaded'
+        ? {
+            ...prev,
+            data: prev.data.filter((t) => !gone.has(t.transactionId)),
+            total: prev.data.filter((t) => !gone.has(t.transactionId)).length,
           }
-        })
-      })
-      .catch(() => {
-        setState((prev) => {
-          if (prev.status !== 'loading-more') return prev
-          // Sem mais páginas: `total` vira o que já está em tela e o observer para.
-          return { status: 'loaded', data: prev.data, total: prev.data.length }
-        })
-      })
-  }, [state, competencia, paymentMethodId, tagId, type])
+        : prev,
+    )
+  }, [])
 
-  const handleDelete = useCallback((id: string) => {
+  const handleDelete = useCallback((transactionId: string) => {
     setDeleteError(null)
-    setConfirmDeleteId(id)
+    setConfirmDeleteId(transactionId)
   }, [])
 
   const handleEdit = useCallback(
@@ -185,102 +156,20 @@ export function TransactionListPage() {
         return
       }
     }
-    setState((prev) => {
-      if (prev.status !== 'loaded' && prev.status !== 'loading-more')
-        return prev
-      const filtered = prev.data.filter((t) => t.id !== confirmDeleteId)
-      return filtered.length === 0
-        ? { status: 'empty' }
-        : { ...prev, data: filtered, total: prev.total - 1 }
-    })
+    dropTransactions([confirmDeleteId])
     setConfirmDeleteId(null)
     setDeleting(false)
-  }, [confirmDeleteId])
+  }, [confirmDeleteId, dropTransactions])
 
   const handleCancelDelete = useCallback(() => {
     setConfirmDeleteId(null)
     setDeleteError(null)
   }, [])
 
-  const handleToggleSelect = useCallback((id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }, [])
-
-  const handleToggleSelectAll = useCallback(() => {
-    if (state.status !== 'loaded' && state.status !== 'loading-more') return
-    const allSelected = state.data.every((t) => selectedIds.has(t.id))
-    if (allSelected) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(state.data.map((t) => t.id)))
-    }
-  }, [state, selectedIds])
-
-  const handleBulkDelete = useCallback(() => {
-    setBulkDeleteError(null)
-    setBulkDeleteOpen(true)
-  }, [])
-
-  const handleConfirmBulkDelete = useCallback(async () => {
-    if (selectedIds.size === 0) return
-    setBulkDeleting(true)
-    setBulkDeleteError(null)
-
-    const ids = Array.from(selectedIds)
-    try {
-      await deleteTransactions(ids)
-      setSelectedIds(new Set())
-      setBulkDeleteOpen(false)
-      setState((prev) => {
-        if (prev.status !== 'loaded' && prev.status !== 'loading-more')
-          return prev
-        const idSet = new Set(ids)
-        const filtered = prev.data.filter((t) => !idSet.has(t.id))
-        return filtered.length === 0
-          ? { status: 'empty' }
-          : { ...prev, data: filtered, total: prev.total - ids.length }
-      })
-    } catch (err) {
-      setBulkDeleteError(
-        err instanceof Error ? err.message : 'Erro ao remover transações',
-      )
-    } finally {
-      setBulkDeleting(false)
-    }
-  }, [selectedIds])
-
-  const handleCancelBulkDelete = useCallback(() => {
-    setBulkDeleteOpen(false)
-    setBulkDeleteError(null)
-  }, [])
-
-  const confirmTransaction =
-    confirmDeleteId && (state.status === 'loaded' || state.status === 'loading-more')
-      ? state.data.find((t) => t.id === confirmDeleteId)
+  const confirmTranche =
+    confirmDeleteId && state.status === 'loaded'
+      ? state.data.find((t) => t.transactionId === confirmDeleteId)
       : undefined
-
-  useEffect(() => {
-    const el = loaderRef.current
-    if (!el) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) loadMore()
-      },
-      { threshold: 0.1 },
-    )
-
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [loadMore])
 
   return (
     <div className="flex flex-col gap-4">
@@ -371,7 +260,7 @@ export function TransactionListPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="f-comp">Competência</Label>
+                <Label htmlFor="f-comp">Mês</Label>
                 <Input
                   id="f-comp"
                   type="month"
@@ -422,60 +311,32 @@ export function TransactionListPage() {
       <div className="bg-card rounded-lg border border-border">
         {state.status === 'loading' && <LoadingState />}
         {state.status === 'error' && <ErrorState message={state.message} />}
-        {state.status === 'empty' && (
+        {state.status === 'loaded' && state.data.length === 0 && (
           <EmptyState
             message={
               activeFilters > 0
-                ? 'Nenhuma transação com os filtros atuais.'
-                : undefined
+                ? 'Nada vence neste mês com os filtros atuais.'
+                : 'Nada vence neste mês.'
             }
           />
         )}
-        {(state.status === 'loaded' || state.status === 'loading-more') && (
+        {state.status === 'loaded' && state.data.length > 0 && (
           <>
-            {selectedIds.size > 0 && (
-              <div className="px-4 py-2 bg-accent border-b border-border flex items-center justify-between">
-                <span className="text-sm font-medium">
-                  {selectedIds.size} selecionada{selectedIds.size > 1 ? 's' : ''}
-                </span>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBulkDelete}
-                  disabled={bulkDeleting}
-                >
-                  <Trash2 className="size-4" />
-                  Remover selecionada{selectedIds.size > 1 ? 's' : ''}
-                </Button>
-              </div>
-            )}
-            {bulkDeleteError && (
-              <div className="px-4 py-3 bg-destructive/10 border-b border-destructive/20">
-                <p className="text-sm text-destructive">{bulkDeleteError}</p>
-              </div>
-            )}
             {deleteError && (
               <div className="px-4 py-3 bg-destructive/10 border-b border-destructive/20">
                 <p className="text-sm text-destructive">{deleteError}</p>
               </div>
             )}
-            <TransactionTable
-              transactions={state.data}
-              selectedIds={selectedIds}
-              onToggleSelect={handleToggleSelect}
-              onToggleSelectAll={handleToggleSelectAll}
+            <TrancheTable
+              tranches={state.data}
               onDelete={handleDelete}
               onEdit={handleEdit}
               onOpen={handleOpen}
             />
-            {state.data.length < state.total && (
-              <div ref={loaderRef} className="py-6">
-                {state.status === 'loading-more' && (
-                  <div className="flex justify-center">
-                    <Loader2 className="size-6 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </div>
+            {state.total > state.data.length && (
+              <p className="px-4 py-3 text-sm text-muted-foreground">
+                Mostrando {state.data.length} de {state.total}.
+              </p>
             )}
           </>
         )}
@@ -485,22 +346,17 @@ export function TransactionListPage() {
         open={confirmDeleteId !== null}
         title="Remover transação"
         message={
-          confirmTransaction
-            ? `Tem certeza que deseja remover "${confirmTransaction.description}" (${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Math.abs(confirmTransaction.amount))})?`
+          confirmTranche
+            ? `Remover "${confirmTranche.description}"? A compra inteira sai${
+                confirmTranche.installments > 1
+                  ? `, com as ${confirmTranche.installments} parcelas`
+                  : ''
+              }.`
             : 'Tem certeza que deseja remover esta transação?'
         }
         loading={deleting}
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
-      />
-
-      <ConfirmDialog
-        open={bulkDeleteOpen}
-        title="Remover transações"
-        message={`Tem certeza que deseja remover ${selectedIds.size} transação${selectedIds.size > 1 ? 'ões' : ''}?`}
-        loading={bulkDeleting}
-        onConfirm={handleConfirmBulkDelete}
-        onCancel={handleCancelBulkDelete}
       />
 
       {/* O formulário é rota filha: abre como modal por cima desta lista. */}
