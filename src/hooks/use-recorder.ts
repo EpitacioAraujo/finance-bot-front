@@ -33,20 +33,29 @@ export function useRecorder() {
   // soltar nesse meio-tempo, `stop` não tem o que parar — sem isto o microfone
   // ficaria aberto até o teto de 60s.
   const stopped = useRef(false)
+  const playing = useRef<HTMLAudioElement | null>(null)
+
+  const hush = useCallback(() => {
+    playing.current?.pause()
+    playing.current = null
+  }, [])
 
   // Sem isto o ponto de "gravando" do navegador fica aceso depois de fechar.
   const release = useCallback(() => {
     window.clearTimeout(timer.current)
+    hush()
     stream.current?.getTracks().forEach((track) => track.stop())
     void context.current?.close()
     stream.current = null
     context.current = null
     recorder.current = null
     setAnalyser(null)
-  }, [])
+  }, [hush])
 
   const start = useCallback(async () => {
     if (state === 'recording' || state === 'sending') return
+    // Apertar o microfone interrompe: ninguém fala por cima da resposta.
+    hush()
     stopped.current = false
     setReply(null)
     setError(null)
@@ -90,6 +99,7 @@ export function useRecorder() {
           setReply(data)
           setState('idle')
           const audio = new Audio(`data:audio/mpeg;base64,${data.audio}`)
+          playing.current = audio
           // ponytail: se o navegador barrar o autoplay, o texto fica na tela.
           // Se isso virar problema no iPhone, aí entra o botão de tocar.
           void audio.play().catch(() => undefined)
@@ -106,7 +116,7 @@ export function useRecorder() {
     setState('recording')
     timer.current = window.setTimeout(() => rec.stop(), MAX_MS)
     if (stopped.current) rec.stop()
-  }, [state, release])
+  }, [state, release, hush])
 
   const stop = useCallback(() => {
     stopped.current = true

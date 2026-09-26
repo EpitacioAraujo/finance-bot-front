@@ -92,7 +92,7 @@ export function PlanningPage() {
   const payLabels = payTarget && BILL_LABELS[payTarget.type]
 
   const handleConfirmPay = async () => {
-    if (!payTarget || !payLabels) return
+    if (!payTarget || !payLabels || !payTarget.id) return
     setPaying(true)
     try {
       if (payTarget.kind === 'bill') {
@@ -195,10 +195,13 @@ export function PlanningPage() {
 
       {openCycle && (
         <CycleItemsDialog
-          cycleId={openCycle.id}
-          description={openCycle.paymentMethod.description}
-          total={openCycle.amount}
-          onClose={() => setOpenCycle(null)}
+          cycle={openCycle}
+          onClose={() => {
+            setOpenCycle(null)
+            // Dá para apagar uma conta de dentro do diálogo; a lista atrás
+            // ficaria com o valor velho da fatura.
+            load()
+          }}
         />
       )}
 

@@ -43,33 +43,41 @@ export function BillsSection({ type, items, onPay, onDelete, onOpenCycle }: Bill
     </span>
   )
 
-  const actions = (item: PayableItem) => (
+  const actions = (item: PayableItem) => {
+    // Const, não `item.id` direto: dentro dos callbacks a narrowing do `&&`
+    // não sobrevive a uma propriedade mutável.
+    const id = item.id
+
+    return (
     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-      {item.status === 'pending' && (
+      {/* Sem id é fatura que ainda não existe no banco: não há o que pagar. */}
+      {item.status === 'pending' && id && (
         <Button variant="outline" size="sm" onClick={() => onPay(item)}>
           <Check className="size-3.5 text-green-600" />
           {L.verb}
         </Button>
       )}
       {/* Fatura não é entidade editável: só a conta tem edit/delete. */}
-      {item.kind === 'bill' && (
+      {item.kind === 'bill' && id && (
         <>
           <Button
             variant="ghost"
             size="icon-xs"
-            onClick={() => navigate(`/planejamento/${item.id}/editar`)}
+            onClick={() => navigate(`/planejamento/${id}/editar`)}
           >
             <Pencil className="size-3" />
           </Button>
-          <Button variant="ghost" size="icon-xs" onClick={() => onDelete(item.id)}>
+          <Button variant="ghost" size="icon-xs" onClick={() => onDelete(id)}>
             <Trash2 className="size-3 text-red-500" />
           </Button>
         </>
       )}
     </div>
-  )
+    )
+  }
 
-  // Só a fatura abre detalhe: a conta não tem o que expandir.
+  // Só a fatura abre detalhe: a conta não tem o que expandir. A virtual abre
+  // igual — dentro dela estão as contas previstas, que é onde se mexe nelas.
   const openCycle = (item: PayableItem) =>
     item.kind === 'cycle' ? () => onOpenCycle(item) : undefined
 

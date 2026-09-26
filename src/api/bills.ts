@@ -57,10 +57,14 @@ export function payBill(
 }
 
 /** As compras que compõem a fatura — à vista no cartão e parcelas. */
-export function listConsolidatedItems(
-  cycleId: string,
-): Promise<ConsolidatedItem[]> {
-  return get<ConsolidatedItem[]>(`/consolidated/${cycleId}/items`)
+/** Fatura do banco vai por `cycleId`; a virtual, por cartão e janela. */
+export function listConsolidatedItems(params: {
+  cycleId?: string
+  paymentMethodId?: string
+  from?: string
+  to?: string
+}): Promise<ConsolidatedItem[]> {
+  return get<ConsolidatedItem[]>(`/consolidated/items?${query({ ...params })}`)
 }
 
 export function payConsolidated(cycleId: string): Promise<unknown> {

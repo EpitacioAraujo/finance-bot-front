@@ -39,8 +39,11 @@ export interface PayableItem {
   kind: 'bill' | 'cycle'
   /** Fatura é sempre expense; conta carrega o dela. */
   type: TransactionType
-  /** bill.id ou cycle.id — é o que vai na URL de pay/edit/delete. */
-  id: string
+  /**
+   * bill.id ou cycle.id — é o que vai na URL de pay/edit/delete. Nulo só na
+   * fatura que ainda não existe no banco: não há o que pagar nem abrir.
+   */
+  id: string | null
   /** Chave de linha: conta recorrente repete `id` por ocorrência. */
   key: string
   description: string
@@ -66,7 +69,10 @@ export interface PayableListResult {
 /** Uma compra que entrou na fatura: à vista no cartão ou parcela. */
 export interface ConsolidatedItem {
   id: string
-  transactionId: string
+  /** Nulo na previsão: conta recorrente que ainda não virou compra. */
+  transactionId: string | null
+  /** Preenchido só na previsão: é por ele que se edita ou apaga a conta. */
+  billId: string | null
   description: string
   amount: number
   /** Data da compra, não do vencimento. */
@@ -74,4 +80,6 @@ export interface ConsolidatedItem {
   /** '3/10' quando é parcela; nulo quando foi à vista. */
   tranche: string | null
   paidAt: string | null
+  /** True quando é conta recorrente prevista, ainda não cobrada. */
+  predicted: boolean
 }
