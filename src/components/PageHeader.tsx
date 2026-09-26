@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 
 interface PageHeaderProps {
   title: string
-  period: ReactNode
+  /** Opcional: nem toda tela é recortada por mês. */
+  period?: ReactNode
   actions?: ReactNode
 }
 

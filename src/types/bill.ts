@@ -28,58 +28,40 @@ export interface Bill {
   createdAt: string
 }
 
-export interface BillSummary {
-  totalPredicted: number
-  totalPaid: number
-  totalPending: number
-}
-
-/** Conta ou fatura de cartão, já niveladas pelo backend. */
-export interface PayableItem {
-  kind: 'bill' | 'cycle'
-  /** Fatura é sempre expense; conta carrega o dela. */
-  type: TransactionType
-  /**
-   * bill.id ou cycle.id — é o que vai na URL de pay/edit/delete. Nulo só na
-   * fatura que ainda não existe no banco: não há o que pagar nem abrir.
-   */
-  id: string | null
-  /** Chave de linha: conta recorrente repete `id` por ocorrência. */
+export interface RecurrenceLine {
+  /** bill.id — é o que vai na URL de editar e apagar. */
+  billId: string
   key: string
   description: string
-  dueDate: string
+  /** Em cartão, o dia em que a cobrança cai; fora dele, o vencimento. */
+  date: string
   amount: number
   status: 'paid' | 'pending'
+  /** Falso no cartão: lá dentro quem paga é a fatura. */
+  payable: boolean
+}
+
+export interface RecurrenceGroup {
+  type: TransactionType
   paymentMethod: { id: string; description: string }
-  /** Só cycle: compras na fatura. */
-  itemCount: number | null
-  /** Só cycle: a janela que a fatura cobra — o vencimento sozinho não diz. */
-  period: { startDate: string; endDate: string } | null
+  /** Só crédito: a fatura do mês, que é o que se paga de uma vez. */
+  invoice: {
+    /** Nulo na fatura que ainda não existe no banco: não há o que fechar. */
+    cycleId: string | null
+    startDate: string
+    endDate: string
+    dueDate: string
+    total: number
+    status: 'paid' | 'pending'
+  } | null
+  items: RecurrenceLine[]
 }
 
 /**
- * A tela de contas a pagar é conta + fatura de cartão. O backend junta, nivela
- * e soma: aqui só se renderiza. Contas a receber usam o mesmo shape, sem fatura.
+ * Uma tela: a forma de pagamento é o grupo, e num cartão o cabeçalho é a
+ * fatura. O backend junta, nivela e soma — aqui só se renderiza.
  */
 export interface PayableListResult {
-  items: PayableItem[]
-  summary: BillSummary
+  groups: RecurrenceGroup[]
 }
 
-/** Uma compra que entrou na fatura: à vista no cartão ou parcela. */
-export interface ConsolidatedItem {
-  id: string
-  /** Nulo na previsão: conta recorrente que ainda não virou compra. */
-  transactionId: string | null
-  /** Preenchido só na previsão: é por ele que se edita ou apaga a conta. */
-  billId: string | null
-  description: string
-  amount: number
-  /** Data da compra, não do vencimento. */
-  date: string
-  /** '3/10' quando é parcela; nulo quando foi à vista. */
-  tranche: string | null
-  paidAt: string | null
-  /** True quando é conta recorrente prevista, ainda não cobrada. */
-  predicted: boolean
-}

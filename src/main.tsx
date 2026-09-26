@@ -11,7 +11,7 @@ import { PaymentMethodListPage } from './components/payment-methods/PaymentMetho
 import { PaymentMethodForm } from './components/payment-methods/PaymentMethodForm'
 import { TagListPage } from './components/tags/TagListPage'
 import { TagForm } from './components/tags/TagForm'
-import { PlanningPage } from './components/bills/PlanningPage'
+import { RecurrencesPage } from './components/bills/RecurrencesPage'
 import { BillForm } from './components/bills/BillForm'
 import './index.css'
 
@@ -33,9 +33,10 @@ createRoot(document.getElementById('root')!).render(
             <Route path="tags" element={<TagListPage />} />
             <Route path="tags/new" element={<TagForm />} />
             <Route path="tags/:id/edit" element={<TagForm />} />
-            <Route path="planejamento" element={<PlanningPage />} />
-            <Route path="planejamento/nova" element={<BillForm />} />
-            <Route path="planejamento/:id/editar" element={<BillForm />} />
+            <Route path="recorrencias" element={<RecurrencesPage />} />
+            <Route path="planejamento" element={<Navigate to="/recorrencias" replace />} />
+            <Route path="recorrencias/nova" element={<BillForm />} />
+            <Route path="recorrencias/:id/editar" element={<BillForm />} />
             {/* URL sem rota (link velho, digitada errada) cai no dashboard em vez de tela branca. */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

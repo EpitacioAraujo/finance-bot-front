@@ -34,7 +34,7 @@ import { VoiceFab } from '@/components/voice/VoiceFab'
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/transactions', label: 'Transações', icon: ArrowLeftRight },
-  { to: '/planejamento', label: 'Compromissos', icon: HandCoins },
+  { to: '/recorrencias', label: 'Recorrências', icon: HandCoins },
   { to: '/payment-methods', label: 'Formas de Pagamento', icon: CreditCard },
   { to: '/tags', label: 'Tags', icon: Tags },
 ]

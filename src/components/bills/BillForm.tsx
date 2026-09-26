@@ -99,7 +99,7 @@ export function BillForm() {
         await createBill({ ...data, type })
         toast.success('Conta criada')
       }
-      navigate('/planejamento')
+      navigate('/recorrencias')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Erro ao salvar')
     } finally {
@@ -118,7 +118,7 @@ export function BillForm() {
   return (
     <div className="mx-auto w-full max-w-lg">
       <div className="mb-6 flex items-center gap-2">
-        <Button variant="ghost" size="icon-sm" onClick={() => navigate('/planejamento')}>
+        <Button variant="ghost" size="icon-sm" onClick={() => navigate('/recorrencias')}>
           <ArrowLeft className="size-4" />
         </Button>
         <h1 className="text-xl font-semibold">
@@ -278,7 +278,7 @@ export function BillForm() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" onClick={() => navigate('/planejamento')}>
+              <Button type="button" variant="outline" onClick={() => navigate('/recorrencias')}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={saving}>

@@ -1,17 +1,11 @@
 import { get, post, patch, del, query } from '@/lib/api'
-import type {
-  Bill,
-  BillFrequency,
-  ConsolidatedItem,
-  PayableListResult,
-} from '@/types/bill'
+import type { Bill, BillFrequency, PayableListResult } from '@/types/bill'
 import type { Transaction, TransactionType } from '@/types/transaction'
 
 /** Conta (a pagar e a receber) e fatura numa lista só, já niveladas pelo backend. */
 export function listPayables(params: {
   from: string
   to: string
-  status?: 'paid' | 'pending'
 }): Promise<PayableListResult> {
   return get<PayableListResult>(`/payables?${query({ ...params })}`)
 }
@@ -56,17 +50,7 @@ export function payBill(
   return post<Transaction>(`/bills/${id}/pay`, data)
 }
 
-/** As compras que compõem a fatura — à vista no cartão e parcelas. */
-/** Fatura do banco vai por `cycleId`; a virtual, por cartão e janela. */
-export function listConsolidatedItems(params: {
-  cycleId?: string
-  paymentMethodId?: string
-  from?: string
-  to?: string
-}): Promise<ConsolidatedItem[]> {
-  return get<ConsolidatedItem[]>(`/consolidated/items?${query({ ...params })}`)
-}
-
+/** Fecha a fatura e quita tudo que está nela, contas recorrentes incluídas. */
 export function payConsolidated(cycleId: string): Promise<unknown> {
   return post(`/consolidated/${cycleId}/pay`)
 }
