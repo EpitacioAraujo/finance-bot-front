@@ -50,6 +50,8 @@ export interface PayableItem {
   paymentMethod: { id: string; description: string }
   /** Só cycle: compras na fatura. */
   itemCount: number | null
+  /** Só cycle: a janela que a fatura cobra — o vencimento sozinho não diz. */
+  period: { startDate: string; endDate: string } | null
 }
 
 /**

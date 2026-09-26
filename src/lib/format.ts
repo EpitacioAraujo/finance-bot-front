@@ -10,6 +10,11 @@ export function formatDate(date: string): string {
   return new Intl.DateTimeFormat('pt-BR').format(new Date(date + 'T00:00:00'))
 }
 
+/** 'YYYY-MM-DD' → '15/08'. O ano é ruído quando a janela cabe num mês. */
+export function shortDate(date: string): string {
+  return formatDate(date).slice(0, 5)
+}
+
 export function formatInputDate(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date + 'T00:00:00') : date
   const year = d.getFullYear()

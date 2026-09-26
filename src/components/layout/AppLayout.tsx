@@ -23,7 +23,7 @@ import {
   ArrowLeftRight,
   CreditCard,
   Tags,
-  ArrowUpDown,
+  HandCoins,
   Sun,
   Moon,
   PanelLeftClose,
@@ -33,7 +33,7 @@ import { useTheme } from '@/hooks/use-theme'
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/transactions', label: 'Transações', icon: ArrowLeftRight },
-  { to: '/planejamento', label: 'Planejamento', icon: ArrowUpDown },
+  { to: '/planejamento', label: 'Compromissos', icon: HandCoins },
   { to: '/payment-methods', label: 'Formas de Pagamento', icon: CreditCard },
   { to: '/tags', label: 'Tags', icon: Tags },
 ]

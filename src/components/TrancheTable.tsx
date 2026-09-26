@@ -10,12 +10,11 @@ import {
 } from './ui/table'
 import { Button } from './ui/button'
 import { Trash2, Pencil } from 'lucide-react'
-import { formatDate } from '../lib/format'
+import { formatDate, shortDate } from '../lib/format'
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 
 /** '2026-10-15' → '15/10' — o ano já está no seletor de mês. */
-const shortDate = (iso: string): string => formatDate(iso).slice(0, 5)
 
 /** Despesa pesa negativo, receita positivo: o subtotal do grupo é o líquido. */
 const signed = (t: TrancheDue): number =>
@@ -122,11 +121,10 @@ export function TrancheTable({
                           </span>
                         )}
                       </span>
-                      {/* A forma de pagamento saiu daqui: é o cabeçalho do grupo. */}
+                      {/* A forma de pagamento saiu daqui: é o cabeçalho do grupo.
+                          O vencimento também: é o do ciclo, igual pra linha toda. */}
                       <span className="text-xs text-muted-foreground">
-                        vence {shortDate(t.dueDate)}
-                        {' '}&middot; {t.paidAt ? 'paga' : 'em aberto'}
-                        {t.tranche && <> &middot; compra {formatDate(t.purchaseDate)}</>}
+                        {formatDate(t.purchaseDate)}
                       </span>
                     </div>
                   </TableCell>

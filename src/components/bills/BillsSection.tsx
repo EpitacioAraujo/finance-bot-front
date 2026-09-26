@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { PayableItem } from '@/types/bill'
 import type { TransactionType } from '@/types/transaction'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, shortDate } from '@/lib/format'
 import { Pencil, Trash2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BILL_LABELS } from './labels'
@@ -25,7 +25,7 @@ interface BillsSectionProps {
   onOpenCycle: (item: PayableItem) => void
 }
 
-/** Uma seção do Planejamento: título + lista de um tipo de conta. Tabela no desktop, cards no mobile. */
+/** Uma seção de Compromissos: título + lista de um tipo de conta. Tabela no desktop, cards no mobile. */
 export function BillsSection({ type, items, onPay, onDelete, onOpenCycle }: BillsSectionProps) {
   const L = BILL_LABELS[type]
   const navigate = useNavigate()
@@ -73,8 +73,15 @@ export function BillsSection({ type, items, onPay, onDelete, onOpenCycle }: Bill
   const openCycle = (item: PayableItem) =>
     item.kind === 'cycle' ? () => onOpenCycle(item) : undefined
 
-  const itemCount = (item: PayableItem) =>
-    item.itemCount !== null && `${item.itemCount} lançamento${item.itemCount > 1 ? 's' : ''}`
+  // O vencimento não diz o que a fatura cobra: quem paga dia 20/09 está pagando
+  // as compras de 15/08 a 14/09. Conta não tem janela e cai fora daqui.
+  const detail = (item: PayableItem) =>
+    [
+      item.period && `${shortDate(item.period.startDate)} a ${shortDate(item.period.endDate)}`,
+      item.itemCount !== null && `${item.itemCount} lançamento${item.itemCount > 1 ? 's' : ''}`,
+    ]
+      .filter(Boolean)
+      .join(' · ')
 
   let body
   if (items.length === 0) {
@@ -99,7 +106,7 @@ export function BillsSection({ type, items, onPay, onDelete, onOpenCycle }: Bill
               <div className="min-w-0">
                 <div className="font-medium">{item.description}</div>
                 <div className="text-xs text-muted-foreground">
-                  {[formatDate(item.dueDate), item.paymentMethod.description, itemCount(item)]
+                  {[formatDate(item.dueDate), item.paymentMethod.description, detail(item)]
                     .filter(Boolean)
                     .join(' · ')}
                 </div>
@@ -139,8 +146,8 @@ export function BillsSection({ type, items, onPay, onDelete, onOpenCycle }: Bill
               >
                 <TableCell className="font-medium whitespace-normal">
                   {item.description}
-                  {itemCount(item) && (
-                    <span className="ml-2 text-xs text-muted-foreground">{itemCount(item)}</span>
+                  {detail(item) && (
+                    <span className="ml-2 text-xs text-muted-foreground">{detail(item)}</span>
                   )}
                 </TableCell>
                 <TableCell>{formatDate(item.dueDate)}</TableCell>
