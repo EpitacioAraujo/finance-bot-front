@@ -11,7 +11,7 @@ export function VoiceFab() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Falar com o assistente"
-        className="bg-primary text-primary-foreground fixed bottom-6 right-6 z-40 flex size-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105"
+        className="bg-primary text-primary-foreground fixed bottom-6 right-6 z-40 max-lg:bottom-20 max-lg:size-12 flex size-14 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105"
       >
         <Sparkles className="size-6" />
       </button>

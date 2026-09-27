@@ -1,40 +1,16 @@
-import { get, post, patch, del } from '@/lib/api'
-import type { PaymentMethod, PaymentMethodKind } from '@/types/payment-method'
+import { post, patch } from '@/lib/api'
+import type { PaymentMethodKind } from '@/types/payment-method'
 
-export function listPaymentMethods(): Promise<PaymentMethod[]> {
-  return get<PaymentMethod[]>('/payment-methods')
-}
-
-export function getPaymentMethod(id: string): Promise<PaymentMethod> {
-  return get<PaymentMethod>(`/payment-methods/${id}`)
-}
-
-export interface CreatePaymentMethodData {
+export function createPaymentMethod(data: {
   description: string
   kind: PaymentMethodKind
-  /** Só aceitos em `credit`. */
+  /** Só no crédito. */
   closingDay?: number
   dueDay?: number
-  showInBills?: boolean
+}): Promise<void> {
+  return post('/payment-methods', data)
 }
 
-export function createPaymentMethod(
-  data: CreatePaymentMethodData,
-): Promise<PaymentMethod> {
-  return post<PaymentMethod>('/payment-methods', data)
-}
-
-export type UpdatePaymentMethodData = Partial<CreatePaymentMethodData> & {
-  active?: boolean
-}
-
-export function updatePaymentMethod(
-  id: string,
-  data: UpdatePaymentMethodData,
-): Promise<PaymentMethod> {
-  return patch<PaymentMethod>(`/payment-methods/${id}`, data)
-}
-
-export function deletePaymentMethod(id: string): Promise<void> {
-  return del(`/payment-methods/${id}`)
+export function updatePaymentMethod(id: string, data: { description: string }): Promise<void> {
+  return patch(`/payment-methods/${id}`, data)
 }

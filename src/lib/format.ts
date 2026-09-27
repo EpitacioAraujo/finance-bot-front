@@ -5,31 +5,9 @@ export function formatCurrency(value: number): string {
   }).format(value)
 }
 
-/** Recebe 'YYYY-MM-DD'; lê como hora local para não virar o dia anterior. */
-export function formatDate(date: string): string {
-  return new Intl.DateTimeFormat('pt-BR').format(new Date(date + 'T00:00:00'))
-}
-
-/** 'YYYY-MM-DD' → '15/08'. O ano é ruído quando a janela cabe num mês. */
+/** 'YYYY-MM-DD' → '15/08'. */
 export function shortDate(date: string): string {
-  return formatDate(date).slice(0, 5)
-}
-
-export function formatInputDate(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date + 'T00:00:00') : date
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-export function parseCurrency(value: string): number {
-  const cleaned = value
-    .replace(/R\$\s?/i, '')
-    .replace(/\./g, '')
-    .replace(',', '.')
-    .trim()
-  return Number(cleaned)
+  return `${date.slice(8, 10)}/${date.slice(5, 7)}`
 }
 
 /** 'YYYY-MM' do mês corrente, em hora local. */

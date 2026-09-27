@@ -1,69 +1,22 @@
-import { get, post, patch, del, query } from '@/lib/api'
-import type {
-  Transaction,
-  TransactionListResult,
-  TransactionType,
-  TrancheDueListResult,
-} from '@/types/transaction'
+import { post, patch, del } from '@/lib/api'
+import type { TransactionType } from '@/types/transaction'
 
-export interface ListTransactionsParams {
-  from?: string
-  to?: string
-  type?: TransactionType
-  tagId?: string
-  paymentMethodId?: string
-  limit?: number
-  offset?: number
-}
-
-export function listTransactions(
-  params: ListTransactionsParams,
-): Promise<TransactionListResult> {
-  return get<TransactionListResult>(`/transactions?${query({ ...params })}`)
-}
-
-/** A mesma janela, ancorada no vencimento da tranche em vez da data da compra. */
-export function listTranchesDue(
-  params: ListTransactionsParams,
-): Promise<TrancheDueListResult> {
-  return get<TrancheDueListResult>(`/tranches?${query({ ...params })}`)
-}
-
-export function getTransaction(id: string): Promise<Transaction> {
-  return get<Transaction>(`/transactions/${id}`)
-}
-
-export interface CreateTransactionData {
+export function createTransaction(data: {
   description: string
   amount: number
   type: TransactionType
   paymentMethodId: string
-  date?: string
-  tagIds?: string[]
+  date: string
   installments?: number
-  notes?: string
-}
-
-export function createTransaction(
-  data: CreateTransactionData,
-): Promise<Transaction> {
-  return post<Transaction>('/transactions', data)
-}
-
-export interface UpdateTransactionData {
-  description?: string
-  amount?: number
-  date?: string
-  paymentMethodId?: string
-  tagIds?: string[]
-  notes?: string
+}): Promise<void> {
+  return post('/transactions', data)
 }
 
 export function updateTransaction(
   id: string,
-  data: UpdateTransactionData,
-): Promise<Transaction> {
-  return patch<Transaction>(`/transactions/${id}`, data)
+  data: { description?: string; amount?: number },
+): Promise<void> {
+  return patch(`/transactions/${id}`, data)
 }
 
 export function deleteTransaction(id: string): Promise<void> {

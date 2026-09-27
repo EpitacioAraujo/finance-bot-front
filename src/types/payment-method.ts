@@ -15,16 +15,3 @@ export const PAYMENT_METHOD_KIND_LABELS: Record<PaymentMethodKind, string> = {
   pix: 'Pix',
   transfer: 'Transferência',
 }
-
-export interface PaymentMethod {
-  id: string
-  description: string
-  /** É aqui que "no crédito" vive — não na transação. */
-  kind: PaymentMethodKind
-  /** Só faz sentido em `credit`. */
-  closingDay: number | null
-  dueDay: number | null
-  showInBills: boolean
-  active: boolean
-  createdAt: string
-}
